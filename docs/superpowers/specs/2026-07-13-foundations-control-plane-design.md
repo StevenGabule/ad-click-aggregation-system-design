@@ -92,7 +92,7 @@ model Ad {
   campaignId String
   campaign   Campaign @relation(fields: [campaignId], references: [id])
   name       String
-  landingUrl String   // metadata only — the redirect handler uses the signed `r` query param, not this
+  landingUrl String   // the redirect target of record — see "Directory read path" below
   createdAt  DateTime @default(now())
 }
 ```
@@ -113,6 +113,8 @@ function listActiveAdDirectory(): Promise<{
 ```
 
 Sub-project 2 polls this on an interval (default 30s, configurable) into a `Map<adId, …>` in the redirect service's process memory — the same "everything about counting the click happens off the critical path" principle the doc applies to Kinesis enqueue (§04), applied one step earlier to the signature-verification lookup. This spec defines the query contract; the cache itself is sub-project 2's to build.
+
+`landingUrl` is deliberately included in this contract even though the doc's own `GET /click` query string also carries a client-supplied `r` param for the same purpose. Trusting `r` at face value is an open redirect: `sig` (as sub-project 2 defines it) covers only the click-identity fields, not `r`, so nothing stops a caller from reusing a validly-signed click and swapping `r` for an arbitrary URL. Sub-project 2's redirect handler treats `landingUrl` from this directory as the target of record and requires `r` to match it exactly, rejecting the request otherwise — the doc's illustrative code sample doesn't show this check, but it's a correctness gap worth closing rather than reproducing.
 
 ## Shared event schema
 
