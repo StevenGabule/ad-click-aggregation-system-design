@@ -921,7 +921,7 @@ git commit -m "feat: add idempotent control-plane seed script"
 
 **Interfaces:**
 - Consumes: `prisma` client shape from Task 6.
-- Produces: `listActiveAdDirectory(client: PrismaClient): Promise<AdDirectoryEntry[]>` where `AdDirectoryEntry = { adId: string; campaignId: string; advertiserId: string; signingSecret: string }` — this is the exact query sub-project 2's redirect-service cache polls (spec §"Directory read path").
+- Produces: `listActiveAdDirectory(client: PrismaClient): Promise<AdDirectoryEntry[]>` where `AdDirectoryEntry = { adId: string; campaignId: string; advertiserId: string; signingSecret: string; landingUrl: string }` — this is the exact query sub-project 2's redirect-service cache polls (spec §"Directory read path"). `landingUrl` is included because sub-project 2's redirect handler validates the client-supplied `r` against it rather than trusting `r` directly (open-redirect prevention — see the spec's note on this).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -949,7 +949,7 @@ describe('listActiveAdDirectory', () => {
       data: { name: 'directory-test-campaign', advertiserId: advertiser.id, status: 'ACTIVE' },
     });
     const ad = await prisma.ad.create({
-      data: { name: 'directory-test-ad', campaignId: campaign.id, landingUrl: 'https://example.com' },
+      data: { name: 'directory-test-ad', campaignId: campaign.id, landingUrl: 'https://example.com/landing' },
     });
 
     const rows = await listActiveAdDirectory(prisma);
@@ -960,6 +960,7 @@ describe('listActiveAdDirectory', () => {
       campaignId: campaign.id,
       advertiserId: advertiser.id,
       signingSecret: 'shh',
+      landingUrl: 'https://example.com/landing',
     });
   });
 
@@ -996,6 +997,7 @@ export interface AdDirectoryEntry {
   campaignId: string;
   advertiserId: string;
   signingSecret: string;
+  landingUrl: string;
 }
 
 export async function listActiveAdDirectory(client: PrismaClient): Promise<AdDirectoryEntry[]> {
@@ -1004,6 +1006,7 @@ export async function listActiveAdDirectory(client: PrismaClient): Promise<AdDir
     select: {
       id: true,
       campaignId: true,
+      landingUrl: true,
       campaign: { select: { advertiserId: true, advertiser: { select: { signingSecret: true } } } },
     },
   });
@@ -1013,6 +1016,7 @@ export async function listActiveAdDirectory(client: PrismaClient): Promise<AdDir
     campaignId: ad.campaignId,
     advertiserId: ad.campaign.advertiserId,
     signingSecret: ad.campaign.advertiser.signingSecret,
+    landingUrl: ad.landingUrl,
   }));
 }
 ```
@@ -1060,7 +1064,7 @@ git commit -m "feat: add ad directory query and db package barrel export"
 
 **Placeholder scan:** No TBD/TODO; every step has complete, runnable code.
 
-**Type consistency:** `AdDirectoryEntry` (Task 8) matches the spec's `listActiveAdDirectory` return shape exactly (`adId`, `campaignId`, `advertiserId`, `signingSecret`). `SeedResult` (Task 7) is consumed only within this plan's own test, not referenced elsewhere yet — safe. `ClickEvent`/`ClickEventSchema` (Task 2) field names match the spec's event contract verbatim (`cid`, `ad_id`, `campaign_id`, `pub_id`, `ts`, `sig`).
+**Type consistency:** `AdDirectoryEntry` (Task 8) matches the spec's `listActiveAdDirectory` return shape exactly (`adId`, `campaignId`, `advertiserId`, `signingSecret`, `landingUrl` — `landingUrl` was added in a follow-up correction after sub-project 2's spec revealed the redirect handler needs it for open-redirect prevention; both this plan and the spec were updated together). `SeedResult` (Task 7) is consumed only within this plan's own test, not referenced elsewhere yet — safe. `ClickEvent`/`ClickEventSchema` (Task 2) field names match the spec's event contract verbatim (`cid`, `ad_id`, `campaign_id`, `pub_id`, `ts`, `sig`).
 
 ---
 
