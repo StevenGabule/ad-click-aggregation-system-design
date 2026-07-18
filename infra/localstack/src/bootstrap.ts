@@ -4,19 +4,22 @@ import {
   DescribeStreamSummaryCommand,
   ResourceInUseException,
   ResourceNotFoundException,
+  waitUntilStreamExists,
 } from '@aws-sdk/client-kinesis';
 
 const STREAM_NAME = 'ad-clicks-raw';
 const SHARD_COUNT = 2;
 
 export async function ensureClickStream(client: KinesisClient): Promise<void> {
-  if (await streamExists(client)) return;
-
-  try {
-    await client.send(new CreateStreamCommand({ StreamName: STREAM_NAME, ShardCount: SHARD_COUNT }));
-  } catch (err) {
-    if (!(err instanceof ResourceInUseException)) throw err;
+  if (!(await streamExists(client))) {
+    try {
+      await client.send(new CreateStreamCommand({ StreamName: STREAM_NAME, ShardCount: SHARD_COUNT }));
+    } catch (err) {
+      if (!(err instanceof ResourceInUseException)) throw err;
+    }
   }
+
+  await waitUntilStreamExists({ client, maxWaitTime: 30 }, { StreamName: STREAM_NAME });
 }
 
 async function streamExists(client: KinesisClient): Promise<boolean> {
