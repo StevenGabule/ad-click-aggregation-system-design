@@ -17,13 +17,14 @@ export async function runSeed(prisma: PrismaClient): Promise<SeedResult> {
   });
 
   const rawApiKey = randomBytes(24).toString('hex');
+  const hashedKey = createHash('sha256').update(rawApiKey).digest('hex');
   await prisma.apiKey.upsert({
     where: { id: 'seed-api-key-1' },
-    update: {},
+    update: { hashedKey },
     create: {
       id: 'seed-api-key-1',
       advertiserId: advertiser.id,
-      hashedKey: createHash('sha256').update(rawApiKey).digest('hex'),
+      hashedKey,
     },
   });
 

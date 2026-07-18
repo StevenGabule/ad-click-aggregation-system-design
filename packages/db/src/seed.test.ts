@@ -1,4 +1,5 @@
 import { describe, expect, it, afterAll } from 'vitest';
+import { createHash } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import { runSeed } from './seed.js';
 
@@ -24,5 +25,14 @@ describe('runSeed', () => {
     const first = await runSeed(prisma);
     const second = await runSeed(prisma);
     expect(first.rawApiKey).not.toEqual(second.rawApiKey);
+  });
+
+  it('stores a hash that matches the freshly returned raw API key', async () => {
+    const result = await runSeed(prisma);
+
+    const apiKey = await prisma.apiKey.findUniqueOrThrow({ where: { id: 'seed-api-key-1' } });
+    const expectedHash = createHash('sha256').update(result.rawApiKey).digest('hex');
+
+    expect(apiKey.hashedKey).toEqual(expectedHash);
   });
 });
