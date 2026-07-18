@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Advertiser {
+  id            String     @id @default(cuid())
+  name          String
+  signingSecret String
+  apiKeys       ApiKey[]
+  campaigns     Campaign[]
+  createdAt     DateTime   @default(now())
+}
+
+model ApiKey {
+  id           String     @id @default(cuid())
+  advertiserId String
+  advertiser   Advertiser @relation(fields: [advertiserId], references: [id])
+  hashedKey    String     @unique
+  createdAt    DateTime   @default(now())
+  revokedAt    DateTime?
+}
+
+model Publisher {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+}
+
+model Campaign {
+  id           String         @id @default(cuid())
+  advertiserId String
+  advertiser   Advertiser     @relation(fields: [advertiserId], references: [id])
+  name         String
+  status       CampaignStatus @default(ACTIVE)
+  ads          Ad[]
+  createdAt    DateTime       @default(now())
+}
+
+enum CampaignStatus {
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+model Ad {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+  name       String
+  landingUrl String
+  createdAt  DateTime @default(now())
+}
