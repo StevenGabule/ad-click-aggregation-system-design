@@ -19,7 +19,7 @@ export async function ensureClickStream(client: KinesisClient): Promise<void> {
     }
   }
 
-  await waitUntilStreamExists({ client, maxWaitTime: 30 }, { StreamName: STREAM_NAME });
+  await waitUntilStreamExists({ client, maxWaitTime: 30, minDelay: 1 }, { StreamName: STREAM_NAME });
 }
 
 async function streamExists(client: KinesisClient): Promise<boolean> {
