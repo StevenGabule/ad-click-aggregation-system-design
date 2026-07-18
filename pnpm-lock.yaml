@@ -18,6 +18,12 @@ importers:
         specifier: ^3.0.4
         version: 3.2.7(@types/node@24.13.3)
 
+  packages/event-schema:
+    dependencies:
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
 packages:
 
   '@esbuild/aix-ppc64@0.28.1':
@@ -580,6 +586,9 @@ packages:
     engines: {node: '>=8'}
     hasBin: true
 
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
 snapshots:
 
   '@esbuild/aix-ppc64@0.28.1':
@@ -1022,3 +1031,5 @@ snapshots:
     dependencies:
       siginfo: 2.0.0
       stackback: 0.0.2
+
+  zod@3.25.76: {}
