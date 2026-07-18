@@ -34,3 +34,15 @@ python3 -m http.server
 ## Content
 
 The doc follows a system-design-interview structure: overview → functional/non-functional requirements → capacity estimation → API design → high-level design → deep dives (idempotency, late data, hot keys, fraud, sketches, Node.js consumer architecture, backfill) → trade-off summary → cost model → closing notes. The stack described is Node.js on AWS (Kinesis Data Streams, DynamoDB, ElastiCache Redis, S3 + Athena). When editing content, keep the numbers in the masthead `stat-strip` consistent with whatever the capacity-estimation and cost-model sections claim.
+
+## Backend monorepo (ad-click-aggregation pipeline)
+
+This repo also contains a pnpm/TypeScript backend monorepo (separate from `index.html`) implementing the design under `packages/` (`@app/db` — Prisma/Postgres, `@app/config`, `@app/event-schema`) and `infra/` (`@app/infra-localstack` — LocalStack bootstrap), with more `services/` packages to follow as the pipeline is built out. Local bootstrap sequence:
+
+1. `docker compose up -d` — starts LocalStack, Postgres, and Redis.
+2. `pnpm install` — installs workspace deps; `@app/db` has a `postinstall` script that auto-runs `prisma generate`, so the Prisma client is ready immediately (no manual step needed, and no DB connection required for this).
+3. `pnpm --filter @app/infra-localstack bootstrap` — creates the Kinesis stream in LocalStack.
+4. Against a fresh database, apply migrations: `DATABASE_URL=postgresql://app:app@localhost:5432/app pnpm --filter @app/db exec prisma migrate deploy` (already applied on the standard dev DB).
+5. Seed demo data: `DATABASE_URL=postgresql://app:app@localhost:5432/app pnpm --filter @app/db seed`.
+
+`@app/db` tests need `DATABASE_URL` set inline on the command (e.g. `DATABASE_URL=postgresql://app:app@localhost:5432/app pnpm --filter @app/db test`) because Prisma Client reads it from `process.env` at runtime and does not auto-load `.env` files.
