@@ -108,7 +108,7 @@ The redirect service's hot path has a p99 <100ms budget with nothing allowed to 
 ```ts
 // packages/db — used by services/click-redirect's in-memory refresh cache, not called per-request
 function listActiveAdDirectory(): Promise<{
-  adId: string; campaignId: string; advertiserId: string; signingSecret: string;
+  adId: string; campaignId: string; advertiserId: string; signingSecret: string; landingUrl: string;
 }[]>
 ```
 
