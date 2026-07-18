@@ -61,6 +61,15 @@ importers:
         specifier: ^3.24.1
         version: 3.25.76
 
+  packages/kinesis-publisher:
+    dependencies:
+      '@app/event-schema':
+        specifier: workspace:*
+        version: link:../event-schema
+      '@aws-sdk/client-kinesis':
+        specifier: ^3.716.0
+        version: 3.1089.0
+
 packages:
 
   '@aws-sdk/client-kinesis@3.1089.0':
