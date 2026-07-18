@@ -1,0 +1,17 @@
+{
+  "name": "@app/infra-localstack",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bootstrap": "tsx src/bootstrap.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-kinesis": "^3.716.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}
