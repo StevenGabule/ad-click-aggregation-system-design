@@ -104,6 +104,12 @@ importers:
         specifier: ^1.1.3
         version: 1.4.2(encoding@0.1.13)
 
+  packages/statements-store:
+    dependencies:
+      '@aws-sdk/client-dynamodb':
+        specifier: ^3.716.0
+        version: 3.1090.0
+
   packages/windowed-aggregator: {}
 
   services/aggregator:
