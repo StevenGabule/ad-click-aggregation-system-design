@@ -70,6 +70,37 @@ importers:
         specifier: ^3.716.0
         version: 3.1089.0
 
+  services/batch-ingest:
+    dependencies:
+      '@app/click-signature':
+        specifier: workspace:*
+        version: link:../../packages/click-signature
+      '@app/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@app/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@app/directory-cache':
+        specifier: workspace:*
+        version: link:../../packages/directory-cache
+      '@app/event-schema':
+        specifier: workspace:*
+        version: link:../../packages/event-schema
+      '@app/kinesis-publisher':
+        specifier: workspace:*
+        version: link:../../packages/kinesis-publisher
+      '@aws-sdk/client-kinesis':
+        specifier: ^3.716.0
+        version: 3.1089.0
+      fastify:
+        specifier: ^5.2.0
+        version: 5.10.0
+    devDependencies:
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.1
+
   services/click-redirect:
     dependencies:
       '@app/click-signature':
