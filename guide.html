@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Beginner's Guide — Running &amp; Understanding the Ad Click Aggregation Backend</title>
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxNiAxNic+PHRleHQgeT0nMTMnIGZvbnQtc2l6ZT0nMTMnPvCfk5o8L3RleHQ+PC9zdmc+" />
+<style>
+/* Self-contained, no external resources — same rule as index.html. System fonts, no JS. */
+:root {
+  --bg: #FCFDFD; --bg-soft: #F1F5F6; --ink: #16292E; --ink-soft: #46626A; --ink-faint: #6E8A90;
+  --accent: #0B7C93; --accent-soft: #E2F3F7; --border: #D8E4E7;
+  --good: #1C7C43; --good-bg: #E5F5EB; --warn: #8A5A00; --warn-bg: #FBF1DC;
+  --code-bg: #0E2227; --code-ink: #D9EDF2; --mark-bg: #FFF3C4;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0B1519; --bg-soft: #101E23; --ink: #DEEDF0; --ink-soft: #9DBAC0; --ink-faint: #6E8A90;
+    --accent: #2DD4EF; --accent-soft: #0E2A31; --border: #1E3239;
+    --good: #4CC97A; --good-bg: #0F2A1A; --warn: #E5B458; --warn-bg: #2A2210;
+    --code-bg: #081418; --code-ink: #C9E4EA; --mark-bg: #4a3d10;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+main { max-width: 60rem; margin: 0 auto; padding: 1.5rem 1.25rem 6rem; }
+header.hero { border-bottom: 1px solid var(--border); background: var(--bg-soft); }
+header.hero .inner { max-width: 60rem; margin: 0 auto; padding: 3rem 1.25rem 2.2rem; }
+.eyebrow { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin: 0 0 .6rem; }
+h1 { font-size: clamp(1.7rem, 4vw, 2.5rem); line-height: 1.15; margin: 0 0 .8rem; }
+.subtitle { color: var(--ink-soft); max-width: 46rem; margin: 0; font-size: 1.05rem; }
+h2 { font-size: 1.45rem; margin: 3rem 0 .8rem; padding-top: .5rem; border-top: 1px solid var(--border); }
+h2 .num { color: var(--accent); font-family: ui-monospace, monospace; margin-right: .5rem; font-size: 1.1rem; }
+h3 { font-size: 1.12rem; margin: 1.8rem 0 .5rem; }
+p, li { color: var(--ink); }
+li { margin: .3rem 0; }
+a { color: var(--accent); }
+strong { color: var(--ink); }
+nav.toc { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.4rem; margin: 2rem 0; }
+nav.toc ol { margin: .4rem 0 0; padding-left: 1.4rem; columns: 2; column-gap: 2.5rem; }
+nav.toc li { margin: .2rem 0; break-inside: avoid; }
+nav.toc .toc-title { font-weight: 700; font-size: .85rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+@media (max-width: 640px) { nav.toc ol { columns: 1; } }
+code {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .875em;
+  background: var(--bg-soft); border: 1px solid var(--border); border-radius: 4px; padding: .08em .35em;
+}
+pre {
+  background: var(--code-bg); color: var(--code-ink); border-radius: 8px;
+  padding: .9rem 1.1rem; overflow-x: auto; line-height: 1.55; font-size: .84rem;
+}
+pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+pre .c { color: #6E9AA5; } /* comment */
+pre.diagram { line-height: 1.35; font-size: .8rem; }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .92rem; }
+th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+th { background: var(--bg-soft); font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); }
+td code { white-space: nowrap; }
+.note, .warn, .why {
+  border-radius: 8px; padding: .8rem 1.1rem; margin: 1rem 0; border: 1px solid;
+}
+.note { background: var(--accent-soft); border-color: var(--accent); }
+.warn { background: var(--warn-bg); border-color: var(--warn); }
+.why  { background: var(--good-bg); border-color: var(--good); }
+.note > .label, .warn > .label, .why > .label {
+  display: block; font-size: .72rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; margin-bottom: .3rem;
+}
+.note > .label { color: var(--accent); } .warn > .label { color: var(--warn); } .why > .label { color: var(--good); }
+.note :last-child, .warn :last-child, .why :last-child { margin-bottom: 0; }
+.term { border-bottom: 2px dotted var(--accent); font-weight: 600; }
+kbd {
+  font-family: ui-monospace, monospace; font-size: .8em; background: var(--bg-soft);
+  border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: .1em .45em;
+}
+mark { background: var(--mark-bg); color: inherit; border-radius: 3px; padding: 0 .2em; }
+.steps { counter-reset: step; list-style: none; padding-left: 0; }
+.steps > li { counter-increment: step; margin: 1.2rem 0; padding-left: 2.6rem; position: relative; }
+.steps > li::before {
+  content: counter(step); position: absolute; left: 0; top: .05rem;
+  width: 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--accent); color: var(--bg);
+  display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: .9rem;
+}
+footer { max-width: 60rem; margin: 0 auto; padding: 0 1.25rem 3rem; color: var(--ink-faint); font-size: .85rem; border-top: 1px solid var(--border); padding-top: 1.2rem; }
+.pill { display: inline-block; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 999px; padding: .05rem .6rem; font-size: .78rem; color: var(--ink-soft); margin: 0 .15rem .3rem 0; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="inner">
+    <p class="eyebrow">Hands-on guide · No prior monorepo or AWS experience assumed</p>
+    <h1>Running &amp; Understanding the Ad Click Aggregation Backend</h1>
+    <p class="subtitle">This repo contains a working backend that counts ad clicks two ways at once: <strong>fast and approximately</strong> for dashboards, and <strong>slowly but exactly</strong> for billing. This guide explains every concept it uses, gets it running on your machine, and walks a real click through the whole pipeline.</p>
+  </div>
+</header>
+
+<main>
+
+<nav class="toc">
+  <span class="toc-title">Contents</span>
+  <ol>
+    <li><a href="#what">What is this project?</a></li>
+    <li><a href="#bigpicture">The big picture</a></li>
+    <li><a href="#concepts">Concepts primer</a></li>
+    <li><a href="#map">Repo map</a></li>
+    <li><a href="#setup">Getting it running</a></li>
+    <li><a href="#demo">A click's journey (hands-on demo)</a></li>
+    <li><a href="#deepdive">How each piece works</a></li>
+    <li><a href="#gaps">Deliberate gaps &amp; limits</a></li>
+    <li><a href="#troubleshooting">Troubleshooting</a></li>
+    <li><a href="#glossary">Glossary</a></li>
+  </ol>
+</nav>
+
+<!-- ================================================================ -->
+<h2 id="what"><span class="num">01</span>What is this project?</h2>
+
+<p>There are two things in this repository:</p>
+<ul>
+  <li><strong><code>index.html</code></strong> — a system-design document. It's the "architecture on paper": requirements, capacity math, API design, trade-offs. Open it in a browser and read it like a blog post.</li>
+  <li><strong>The implementation</strong> — everything under <code>packages/</code>, <code>services/</code>, and <code>infra/</code>. It's that design actually built, in TypeScript, runnable entirely on your laptop with zero AWS account and zero cloud cost.</li>
+</ul>
+
+<p>The problem being solved, in one sentence: <em>when a user clicks an ad, the advertiser gets billed for it — so every click must be counted <strong>exactly once</strong>, even though networks retry, clients resend, and bots exist.</em></p>
+
+<p>The design docs that drove each piece live in <code>docs/superpowers/specs/</code> (what to build &amp; why) and <code>docs/superpowers/plans/</code> (step-by-step build plans). If you ever wonder "why was it done this way?", the spec usually says.</p>
+
+<!-- ================================================================ -->
+<h2 id="bigpicture"><span class="num">02</span>The big picture</h2>
+
+<p>The core architectural idea — worth internalizing before anything else — is that the system runs <strong>two parallel lanes</strong> off the same stream of click events:</p>
+
+<pre class="diagram">
+                          ┌─────────────────────────────────────────────────────┐
+                FAST LANE │  aggregator: dedup → 1-min windows → add to counts  │  seconds old,
+                (approx.) │  (allowed to be slightly wrong)                     │  for dashboards
+                          └────────▲──────────────────────┬─────────────────────┘
+ user clicks ad                    │                      ▼
+      │                            │               ┌──────────────┐      ┌───────────┐
+      ▼                            │               │   DynamoDB   │◀─────│ query-api │◀── dashboard
+┌────────────────┐        ┌────────┴────────┐      │  aggregates  │      └───────────┘
+│ click-redirect │───────▶│  Kinesis stream │      └──────────────┘
+│ (302 first,    │        │  ad-clicks-raw  │
+│  count later)  │        └────────┬────────┘
+└────────────────┘                 │
+                          ┌────────▼────────────────────────────────────────────┐
+               EXACT LANE │  archiver: EVERY raw event → S3 as Parquet files    │  hours old,
+               (billing)  │  (duplicates included — on purpose!)                │  money-grade
+                          └────────┬────────────────────────────────────────────┘
+                                   ▼
+                    reconcile: DuckDB COUNT(DISTINCT cid) over S3
+                                   ▼
+                       statements table ──▶ billing-api ──▶ invoice
+</pre>
+
+<div class="why"><span class="label">Why two lanes?</span>
+<p>Dashboards need a number in <em>seconds</em> and can tolerate it being slightly off. Invoices need a number that is <em>exactly right</em> and can wait until tomorrow. No single system does both well, so this one doesn't pretend to — the fast number is explicitly labeled <code>"exact": false</code> and the billing number <code>"exact": true</code>. Almost every design decision in the codebase serves one lane or the other.</p></div>
+
+<p>The second key idea: <strong>delivery is "at-least-once", so counting must be deduplicated.</strong> Networks time out and retry. The same click event can arrive two or three times. Each lane handles this differently:</p>
+<ul>
+  <li>The <strong>fast lane</strong> dedups <em>at ingest</em>: each click has a unique id (<code>cid</code>), and a Redis+DynamoDB check drops a <code>cid</code> it has seen before.</li>
+  <li>The <strong>exact lane</strong> doesn't filter at all — it archives <em>everything</em>, duplicates included, and dedups <em>at query time</em> with SQL's <code>COUNT(DISTINCT cid)</code>. That makes reprocessing safe: replaying the same data twice gives the same answer.</li>
+</ul>
+
+<!-- ================================================================ -->
+<h2 id="concepts"><span class="num">03</span>Concepts primer — the things you're "assumed to know," explained</h2>
+
+<h3>Monorepo &amp; pnpm workspaces</h3>
+<p>A <span class="term">monorepo</span> is one git repository containing many small packages instead of one big app. This repo uses <a href="https://pnpm.io">pnpm</a> "workspaces" to manage them. The file <code>pnpm-workspace.yaml</code> declares three folders of packages:</p>
+<ul>
+  <li><code>packages/*</code> — <strong>libraries</strong>: reusable logic, imported by other packages. They don't "run".</li>
+  <li><code>services/*</code> — <strong>runnable processes</strong>: HTTP servers and stream consumers. Each has a <code>start</code> script.</li>
+  <li><code>infra/*</code> — <strong>setup scripts</strong>: create the local AWS resources (stream, tables, bucket).</li>
+</ul>
+<p>Two pnpm commands do 90% of the work:</p>
+<pre><code>pnpm -r &lt;script&gt;                  <span class="c"># run &lt;script&gt; in EVERY package ("-r" = recursive), e.g. pnpm -r test</span>
+pnpm --filter @app/db &lt;script&gt;    <span class="c"># run &lt;script&gt; in ONE package, by its name in package.json</span></code></pre>
+<p>Packages depend on each other with <code>"@app/db": "workspace:*"</code> in their <code>package.json</code> — that means "link the local folder, not something from the internet."</p>
+
+<h3>TypeScript, ESM, and the <code>dist/</code> folder</h3>
+<p>Everything is TypeScript compiled by <code>tsc</code> into a <code>dist/</code> folder per package. When <code>services/query-api</code> imports <code>@app/db</code>, Node actually loads <code>packages/db/dist/index.js</code> — so <mark>if you haven't built a package, imports of it fail</mark>. That's why the setup below includes <code>pnpm&nbsp;-r&nbsp;build</code>. (Imports end in <code>.js</code> even in <code>.ts</code> files — that's an ESM convention, not a typo.)</p>
+
+<h3>Docker, Compose, and colima</h3>
+<p><span class="term">Docker</span> runs software in isolated containers — here, the databases. <span class="term">Docker Compose</span> starts a whole set of them from one file (<code>docker-compose.yml</code>): Postgres, Redis, and LocalStack. On macOS without Docker Desktop, <span class="term">colima</span> provides the Linux VM Docker needs — you just run <code>colima start</code> once per boot.</p>
+
+<h3>LocalStack — "fake AWS on your laptop"</h3>
+<p>The design targets real AWS services, but you don't need an AWS account. <span class="term">LocalStack</span> is a container that emulates AWS APIs on <code>http://localhost:4566</code>. The code uses the <em>real</em> AWS SDK — the only difference is one environment variable, <code>AWS_ENDPOINT_URL</code>, pointing at LocalStack. Unset it (and supply real credentials) and the identical code talks to real AWS. There is deliberately <em>no</em> <code>if&nbsp;(isLocal)</code> branching anywhere.</p>
+
+<h3>The storage cast — what each database does here</h3>
+<table>
+  <tr><th>Technology</th><th>Think of it as…</th><th>Used here for</th></tr>
+  <tr><td><strong>Kinesis</strong> (via LocalStack)</td><td>A conveyor belt of events. Producers put records on; multiple independent consumers read them in order. Split into parallel lanes called <em>shards</em>.</td><td>The <code>ad-clicks-raw</code> stream every click flows through. Locally it has 2 shards.</td></tr>
+  <tr><td><strong>DynamoDB</strong> (via LocalStack)</td><td>A giant, fast key-value dictionary. No SQL joins; you fetch by key.</td><td>Three tables: <code>click-aggregates</code> (live counts), <code>click-dedup</code> (seen click-ids), <code>click-statements</code> (billing output).</td></tr>
+  <tr><td><strong>S3</strong> (via LocalStack)</td><td>An infinite file drive in the cloud.</td><td>The raw archive: every click event, stored forever as Parquet files under <code>s3://ad-clicks-raw/dt=YYYY-MM-DD/</code>.</td></tr>
+  <tr><td><strong>Redis</strong></td><td>An in-memory dictionary measured in microseconds. Loses data on restart — that's accepted.</td><td>The dedup fast-path: "have I seen click-id X in the last 10 minutes?"</td></tr>
+  <tr><td><strong>Postgres + Prisma</strong></td><td>A classic relational database; <em>Prisma</em> is the TypeScript library that talks to it with generated types.</td><td>The "control plane": advertisers, campaigns, ads, API keys — the slow-changing business data.</td></tr>
+  <tr><td><strong>DuckDB</strong></td><td>SQLite's analytics cousin: a SQL engine embedded <em>inside</em> the Node process — no server. Reads/writes Parquet directly on S3.</td><td>The nightly reconciliation query (the local stand-in for AWS Athena).</td></tr>
+</table>
+
+<h3>Smaller supporting cast</h3>
+<ul>
+  <li><strong>Parquet</strong> — a compressed, columnar file format; the standard for analytics data at rest.</li>
+  <li><strong>Fastify</strong> — the web framework the HTTP services use (like Express, but faster and typed).</li>
+  <li><strong>Zod</strong> — runtime validation: <code>ClickEventSchema.safeParse(input)</code> rejects malformed events at the door.</li>
+  <li><strong>Vitest</strong> — the test runner. Unit tests are pure; integration tests talk to the real local containers.</li>
+  <li><strong>HMAC signature (<code>sig</code>)</strong> — every click URL carries a cryptographic signature computed from its fields with a per-advertiser secret. A forged or tampered URL fails verification. This is the system's authentication for clicks.</li>
+</ul>
+
+<!-- ================================================================ -->
+<h2 id="map"><span class="num">04</span>Repo map</h2>
+
+<pre><code>packages/                     <span class="c">── libraries (imported, never "run") ──</span>
+  event-schema/          The one true shape of a click event (Zod). Everyone imports this.
+  config/                loadEnv(): typed, validated environment variables.
+  db/                    Prisma schema + queries: advertisers/campaigns/ads/API keys, seed script.
+  click-signature/       HMAC sign/verify for click URLs (constant-time compare).
+  directory-cache/       In-memory 30s-refresh cache of ads → signing secret + landing URL.
+  kinesis-publisher/     publishClickEvent(): the ONE place the shard-salting logic lives.
+  click-dedup/           isNew(cid): Redis fast-path + DynamoDB backstop. Exactly-once's heart.
+  windowed-aggregator/   Pure 1-minute windowing with a 2-min "watermark" for late events.
+  hot-aggregate-store/   DynamoDB atomic-ADD counter writes + latest-window read.
+  kinesis-consumer-loop/ Shared polling loop all stream consumers use (abortable).
+  parquet-archive/       DuckDB: write Parquet to S3 + the COUNT(DISTINCT) billing query.
+  statements-store/      Billing statements table: full-overwrite writes (never increment).
+
+services/                     <span class="c">── runnable processes ──</span>
+  click-redirect/   :3000  GET /click — verify sig, 302 the user, THEN publish the event.
+  batch-ingest/     :3001  POST /v1/events/clicks — bulk upload for offline mobile SDKs.
+  aggregator/       (consumer) dedup → window → flush counts to DynamoDB. Fast lane.
+  archiver/         (consumer) write EVERY raw event to S3 Parquet. Exact lane.
+  query-api/        :3002  GET /v1/ads/:adId/aggregates — the dashboard read (approximate).
+  billing-api/      :3003  GET statement (exact) + POST reconciliation rerun (ops-only).
+
+infra/
+  localstack/       bootstrap: creates the Kinesis stream, 3 DynamoDB tables, S3 bucket.
+
+docs/superpowers/{specs,plans}/   The design docs and build plans for each sub-project.
+index.html                        The original system-design writeup this implements.</code></pre>
+
+<!-- ================================================================ -->
+<h2 id="setup"><span class="num">05</span>Getting it running</h2>
+
+<h3>Prerequisites (one-time)</h3>
+<table>
+  <tr><th>Tool</th><th>Check</th><th>Install (macOS)</th></tr>
+  <tr><td>Node.js ≥ 24</td><td><code>node -v</code></td><td><code>brew install node</code> (or nvm)</td></tr>
+  <tr><td>pnpm ≥ 9</td><td><code>pnpm -v</code></td><td><code>npm install -g pnpm</code></td></tr>
+  <tr><td>Docker CLI + colima</td><td><code>docker ps</code></td><td><code>brew install colima docker docker-compose</code></td></tr>
+</table>
+
+<div class="warn"><span class="label">Two macOS gotchas (both hit during development)</span>
+<ul>
+  <li>If <code>docker compose</code> (with a space) says "not a docker command", link the plugin: <code>mkdir -p ~/.docker/cli-plugins &amp;&amp; ln -sfn /opt/homebrew/opt/docker-compose/bin/docker-compose ~/.docker/cli-plugins/docker-compose</code></li>
+  <li>If you have Homebrew's Postgres installed, it silently occupies port 5432 and shadows the Docker one — you'll get baffling auth failures. Fix: <code>brew services stop postgresql@17</code> (or whatever version <code>brew services list</code> shows).</li>
+</ul></div>
+
+<h3>The bootstrap sequence</h3>
+<ol class="steps">
+  <li><strong>Start the Docker VM</strong> (once per boot):
+    <pre><code>colima start</code></pre></li>
+  <li><strong>Start the databases</strong> (LocalStack + Postgres + Redis) and wait for all three to report <em>healthy</em>:
+    <pre><code>cp .env.example .env        <span class="c"># first time only</span>
+docker compose up -d
+docker compose ps           <span class="c"># repeat until all 3 say "healthy" (~30s)</span></code></pre></li>
+  <li><strong>Install &amp; build</strong>:
+    <pre><code>pnpm install                <span class="c"># also auto-generates the Prisma client (postinstall)</span>
+pnpm -r build               <span class="c"># compiles every package's dist/ — required before running services</span></code></pre></li>
+  <li><strong>Create the AWS resources in LocalStack</strong> (idempotent — safe to re-run):
+    <pre><code>pnpm --filter @app/infra-localstack bootstrap
+<span class="c"># → "LocalStack resources ready: Kinesis stream, dedup table, hot aggregate table,
+#    statements table, raw archive bucket."</span></code></pre></li>
+  <li><strong>Create the database schema, then seed demo data</strong>:
+    <pre><code>DATABASE_URL=postgresql://app:app@localhost:5432/app \
+  pnpm --filter @app/db exec prisma migrate deploy
+
+DATABASE_URL=postgresql://app:app@localhost:5432/app \
+  pnpm --filter @app/db seed
+<span class="c"># → "Seed complete. Demo API key (save this, it is not stored raw): 3f9c…"</span></code></pre>
+    <div class="warn"><span class="label">Save that API key!</span><p>The seed prints a <strong>demo API key</strong> — copy it somewhere. It's your Bearer token for the query and billing APIs, and it's stored only as a hash (it cannot be recovered — though re-running the seed mints a fresh one).</p></div></li>
+  <li><strong>Prove everything works</strong> — run the full test suite (85 tests, unit + integration against the live containers):
+    <pre><code>DATABASE_URL=postgresql://app:app@localhost:5432/app pnpm -r test</code></pre></li>
+</ol>
+
+<div class="note"><span class="label">Why is DATABASE_URL typed inline every time?</span>
+<p>The Prisma <em>CLI</em> auto-loads <code>.env</code>, but the Prisma <em>client library</em> (used at runtime and in tests) reads only the real process environment. Prefixing the variable is the simplest reliable way. Alternatively, load the whole <code>.env</code> into your shell once per terminal: <code>set -a; source .env; set +a</code> — then you can drop the prefixes for that session.</p></div>
+
+<!-- ================================================================ -->
+<h2 id="demo"><span class="num">06</span>A click's journey — hands-on demo</h2>
+
+<p>This is the fun part: fire one real click and watch it move through every store. You'll need a few terminals — each long-running process gets one. First, in <strong>every</strong> terminal, load the environment:</p>
+<pre><code>set -a; source .env; set +a</code></pre>
+
+<h3>Step 1 — start the processes</h3>
+<table>
+  <tr><th>Terminal</th><th>Command</th><th>What it is</th></tr>
+  <tr><td>T1</td><td><code>KINESIS_SHARD_ID=shardId-000000000000 pnpm --filter @app/aggregator start</code></td><td>Fast-lane consumer, shard 0</td></tr>
+  <tr><td>T2</td><td><code>KINESIS_SHARD_ID=shardId-000000000001 pnpm --filter @app/aggregator start</code></td><td>Fast-lane consumer, shard 1</td></tr>
+  <tr><td>T3</td><td><code>KINESIS_SHARD_ID=shardId-000000000000 pnpm --filter @app/archiver start</code></td><td>Exact-lane archiver, shard 0</td></tr>
+  <tr><td>T4</td><td><code>KINESIS_SHARD_ID=shardId-000000000001 pnpm --filter @app/archiver start</code></td><td>Exact-lane archiver, shard 1</td></tr>
+  <tr><td>T5</td><td><code>pnpm --filter @app/click-redirect start</code></td><td>The redirect endpoint (:3000)</td></tr>
+  <tr><td>T6</td><td><code>pnpm --filter @app/query-api start</code></td><td>Dashboard read API (:3002)</td></tr>
+  <tr><td>T7</td><td><code>OPS_TOKEN=dev-ops-token pnpm --filter @app/billing-api start</code></td><td>Billing API (:3003)</td></tr>
+</table>
+
+<div class="note"><span class="label">Why one process per shard?</span>
+<p>Kinesis parallelism = shards. Each consumer process owns exactly one shard — that's the design's scaling model (in production, ECS runs one container per shard automatically; locally, you are the orchestrator). Clicks are spread across shards pseudo-randomly, so with only shard-0 consumers running, roughly half your clicks would be invisible. Running both shards makes the demo deterministic. Skip T2/T4 if you don't mind re-firing clicks until one lands on shard 0.</p></div>
+
+<h3>Step 2 — forge a valid, signed click URL</h3>
+<p>A real click URL is generated by the ad server at render time, HMAC-signed with the advertiser's secret so it can't be forged or tampered with. We'll play ad server, using the seeded advertiser's secret (<code>seed-signing-secret</code>) and the seeded ad:</p>
+<pre><code>node --input-type=module -e '
+import { createHmac } from "node:crypto";
+const f = {
+  cid: "clk_demo_" + Date.now(),          // unique click id — the dedup key
+  ad_id: "seed-ad-1",
+  campaign_id: "seed-campaign-1",
+  pub_id: "seed-publisher-1",
+  ts: new Date().toISOString(),
+};
+const sig = createHmac("sha256", "seed-signing-secret")
+  .update([f.cid, f.ad_id, f.campaign_id, f.pub_id, f.ts].join("|"))
+  .digest("hex");
+const r = encodeURIComponent("https://advertiser.example.com/landing");
+console.log("http://localhost:3000/click?" + new URLSearchParams({ ...f, sig, r }));
+'</code></pre>
+
+<h3>Step 3 — fire it, and watch each layer react</h3>
+<pre><code><span class="c"># Fire the click (the URL from step 2). -i shows headers:</span>
+curl -i "&lt;PASTE THE URL&gt;"
+<span class="c"># → HTTP/1.1 302 Found,  location: https://advertiser.example.com/landing
+#   The user is already gone — everything below happened AFTER the redirect.</span>
+
+<span class="c"># (instant)  The dedup ledger in Redis now knows your cid:</span>
+docker compose exec redis redis-cli keys 'click:clk_demo_*'
+
+<span class="c"># (within ~35s)  The raw event is archived to S3 as Parquet:</span>
+docker compose exec localstack awslocal s3 ls s3://ad-clicks-raw/ --recursive
+
+<span class="c"># (after 2–3 min — see the note below)  The count lands in DynamoDB:</span>
+docker compose exec localstack awslocal dynamodb scan \
+  --table-name click-aggregates --max-items 5</code></pre>
+
+<div class="note"><span class="label">Why does the live count take 2–3 minutes?</span>
+<p>Deliberate design, not slowness: the aggregator counts clicks into <strong>1-minute windows by event time</strong>, then holds each window open <strong>2 extra minutes</strong> (the "watermark") for stragglers that arrive late, then flushes. So a click becomes visible in the aggregate 2–3 minutes after its timestamp. Until then the query below honestly answers <code>clicks: 0</code> for the current window.</p></div>
+
+<pre><code><span class="c"># Query the dashboard number (use the API key the seed printed):</span>
+curl -s -H "Authorization: Bearer &lt;YOUR_SEED_API_KEY&gt;" \
+  http://localhost:3002/v1/ads/seed-ad-1/aggregates
+<span class="c"># → {"adId":"seed-ad-1","windowStart":"…","clicks":1,"exact":false,"asOf":"…"}</span></code></pre>
+
+<h3>Step 4 — try to cheat (and fail)</h3>
+<pre><code><span class="c"># Replay the EXACT same URL — same cid — five more times:</span>
+for i in 1 2 3 4 5; do curl -s -o /dev/null "&lt;SAME URL&gt;"; done
+<span class="c"># The user still gets redirected every time (that part must never break),
+# but the count does NOT go up: Redis SET NX says "seen it", duplicate dropped.</span>
+
+<span class="c"># Tamper with one signed field (change ad_id in the URL) → 400 invalid_request.
+# Point r at a different site → 400 (open-redirect protection: r must equal the
+# landing URL stored in Postgres for that ad). All rejections return the SAME
+# error body, so an attacker can't probe which ad_ids exist.</span></code></pre>
+
+<h3>Step 5 — run billing, like the nightly job would</h3>
+<pre><code><span class="c"># Recompute today's exact statement from the raw S3 archive (ops-only endpoint):</span>
+curl -s -X POST -H "X-Ops-Token: dev-ops-token" \
+  http://localhost:3003/v1/reconciliation/$(date -u +%F)/rerun
+<span class="c"># → {"date":"2026-…","campaignsReconciled":1}</span>
+
+<span class="c"># Read the billing-grade statement (note "exact": true — and note that even if
+# you fired duplicates in step 4, billedClicks counts each cid ONCE, because
+# reconciliation is COUNT(DISTINCT cid) over the unfiltered archive):</span>
+curl -s -H "Authorization: Bearer &lt;YOUR_SEED_API_KEY&gt;" \
+  http://localhost:3003/v1/campaigns/seed-campaign-1/statement
+<span class="c"># → {"campaignId":"seed-campaign-1","period":"…","billedClicks":1,
+#    "excludedInvalidClicks":0,"exact":true,…}</span></code></pre>
+
+<p>That's the whole system: one tap became one row on an invoice — not zero, not two — with a fast approximate number along the way.</p>
+
+<!-- ================================================================ -->
+<h2 id="deepdive"><span class="num">07</span>How each piece works (and the "why" behind it)</h2>
+
+<h3>The hot path: <code>services/click-redirect</code></h3>
+<p>The only user-facing latency in the system. Order of operations is sacred:</p>
+<ol>
+  <li>Validate the query shape (Zod), look the ad up in an <strong>in-memory cache</strong> (refreshed from Postgres every 30s — no DB call on the hot path), verify the HMAC <code>sig</code>, and check <code>r</code> equals the stored landing URL (<strong>open-redirect protection</strong> — never redirect to a client-supplied URL).</li>
+  <li>Send the <code>302</code>. The user's browser is now leaving.</li>
+  <li>Only <em>then</em>, publish the event to Kinesis via <code>setImmediate</code> — fire-and-forget, so a slow or failing Kinesis can never delay a human.</li>
+</ol>
+<p>Every rejection returns the identical <code>400 {"error":"invalid_request"}</code> — deliberately indistinguishable, so callers can't enumerate valid ad ids by comparing error messages.</p>
+
+<h3>The idempotency key: why <code>cid</code> is generated client-side</h3>
+<div class="why"><span class="label">The one decision everything depends on</span>
+<p>The click id is minted <em>before</em> the first thing that can fail. If a retry resends the <em>same</em> <code>cid</code>, downstream dedup can recognize it. If the server minted a fresh id per attempt, a retry would be indistinguishable from a new click and <em>no amount of downstream cleverness could ever fix it</em>.</p></div>
+
+<h3>Exactly-once counting: <code>packages/click-dedup</code></h3>
+<p>Two tiers, checked in order:</p>
+<ul>
+  <li><strong>Redis fast path:</strong> <code>SET click:&lt;cid&gt; 1 NX EX 600</code> — one atomic operation meaning "claim this id if unclaimed, expiring in 10 minutes." Already claimed → duplicate → drop.</li>
+  <li><strong>DynamoDB backstop:</strong> only consulted when Redis says "new" — a conditional write (<code>attribute_not_exists(cid)</code>). If Redis restarted and forgot, DynamoDB still remembers. This is what makes it a genuine backstop rather than a redundant second check.</li>
+</ul>
+
+<h3>Windowing: <code>packages/windowed-aggregator</code></h3>
+<p>Counts are bucketed per <code>(ad, minute)</code> using the click's <strong>event time</strong> (when the user tapped), not arrival time. A window stays open 2 minutes past its end (the <span class="term">watermark</span>) to admit stragglers, then flushes. Two subtleties the code fought hard for:</p>
+<ul>
+  <li><strong>Flush uses DynamoDB <code>ADD</code></strong> (atomic increment), never overwrite — so a late flush for an already-flushed window adds to the count instead of clobbering it.</li>
+  <li><strong>Retry-safety:</strong> a window's in-memory count is only removed <em>after</em> its flush succeeds, per-ad (<code>commitFlushed</code>). If DynamoDB throttles mid-flush, nothing is double-added on retry and nothing is lost. (The review process caught a compounding double-count bug in an earlier version of this logic — the fix is why the API looks the way it does.)</li>
+</ul>
+
+<h3>The exact lane: archiver → DuckDB → statements</h3>
+<ul>
+  <li><strong><code>services/archiver</code></strong> writes <em>every</em> raw event to S3 — no filtering, duplicates included — batched into Parquet files, partitioned by the event's <em>own</em> date (so a retry that straddles midnight still lands with its original in the same partition — another review-caught billing bug).</li>
+  <li><strong><code>reconcileDate</code></strong> (in <code>packages/parquet-archive</code>) runs one DuckDB SQL query over the day's partition: <code>COUNT(DISTINCT cid)</code> per campaign, with a parameterized exclusion set reserved for confirmed-fraud clicks (empty until sub-project 6 lands).</li>
+  <li><strong><code>statements-store</code></strong> writes results with a full <strong>overwrite</strong> — the opposite of the fast lane's <code>ADD</code> — because each reconciliation is a from-scratch recompute. Re-running it must <em>replace</em> the statement, never stack on top.</li>
+</ul>
+<div class="why"><span class="label">Why archive the duplicates?</span>
+<p>Because it makes reprocessing boring. The archive is an immutable record of what happened; correctness lives in one SQL query. Found a bug? Re-run the query. Fraud model updated? Re-run the query. Same input → same answer, every time. If the archive were pre-filtered, every replay would depend on the filter having been right forever.</p></div>
+
+<h3>The read APIs: tenant isolation</h3>
+<p>Both read APIs resolve your Bearer key to an advertiser (keys stored as SHA-256 hashes; revoked keys fail closed), then check <em>ownership</em> before touching data. Asking about an ad that doesn't exist and an ad owned by someone else return <strong>byte-identical 404s from a single code branch</strong> — so a competitor cannot even learn which ad ids exist. The billing API's ops endpoint (<code>/reconciliation/:date/rerun</code>) uses a completely separate credential (<code>X-Ops-Token</code>); advertiser keys don't work there and vice versa.</p>
+
+<h3>How the tests are organized</h3>
+<ul>
+  <li><strong>Pure unit tests</strong> (schema, signature, windowing, batching) — no infrastructure, milliseconds, time passed in explicitly rather than mocked clocks.</li>
+  <li><strong>Integration tests</strong> (db, dedup, stores, parquet-archive, infra) — hit the real local Postgres/Redis/LocalStack, which is why the containers must be up.</li>
+  <li><strong>Service tests</strong> — Fastify's <code>inject()</code> with dependency-injected fakes: every route's logic is tested without any real network or database. Each service exports a pure <code>buildApp(deps)</code>; only the thin <code>server.ts</code> wires real clients, and that file is deliberately untested.</li>
+</ul>
+
+<!-- ================================================================ -->
+<h2 id="gaps"><span class="num">08</span>Deliberate gaps &amp; limits (so they don't surprise you)</h2>
+<ul>
+  <li><strong>Fraud scoring (sub-project 6) isn't built yet.</strong> The reconciliation query's exclusion seam exists but receives an empty set; <code>excludedInvalidClicks</code> is always 0 for now.</li>
+  <li><strong>Local-first only.</strong> No Terraform/CDK, no deployment pipeline. Pointing at real AWS is "just" configuration, but productionizing is out of scope.</li>
+  <li><strong>Consumer resilience is minimal.</strong> If Kinesis throttles or an iterator expires, a consumer crashes and restarts from "now" — in-memory windows/buffers are lost. Fine for the approximate lane (the archive + reconciliation recovers billing), tracked as the top hardening item for the exact lane.</li>
+  <li><strong>Fire-and-forget publish.</strong> If Kinesis is down past SDK retries, a click is redirected but not counted (logged, not silently ignored). The doc's own trade-off; a durable outbox is the known fix.</li>
+  <li><strong>Windows/aggregates are approximate by contract.</strong> Never bill from <code>query-api</code>; that's what statements are for.</li>
+</ul>
+
+<!-- ================================================================ -->
+<h2 id="troubleshooting"><span class="num">09</span>Troubleshooting</h2>
+<table>
+  <tr><th>Symptom</th><th>Cause → fix</th></tr>
+  <tr><td><code>docker: command not found</code> / <code>Cannot connect to the Docker daemon</code></td><td>The colima VM isn't running → <code>colima start</code></td></tr>
+  <tr><td>Postgres auth failures despite correct password</td><td>Homebrew Postgres is squatting on port 5432 → <code>brew services stop postgresql@17</code></td></tr>
+  <tr><td><code>Cannot find module '@app/…/dist/index.js'</code></td><td>Workspace packages aren't compiled → <code>pnpm -r build</code></td></tr>
+  <tr><td><code>@prisma/client did not initialize yet</code></td><td>Generated client missing → <code>pnpm install</code> (postinstall generates it) or <code>pnpm --filter @app/db generate</code></td></tr>
+  <tr><td><code>Environment variable not found: DATABASE_URL</code></td><td>Prisma's runtime doesn't read <code>.env</code> → prefix the command, or <code>set -a; source .env; set +a</code></td></tr>
+  <tr><td>Integration tests fail with connection errors</td><td>Containers down or unhealthy → <code>docker compose ps</code>, then <code>docker compose up -d</code>; LocalStack is slowest to go healthy</td></tr>
+  <tr><td>Aggregator/archiver exits: <code>KINESIS_SHARD_ID is required</code></td><td>Consumers need to be told their shard → set <code>KINESIS_SHARD_ID=shardId-000000000000</code> (or …001)</td></tr>
+  <tr><td>Fired a click but the count stays 0</td><td>Either you're inside the 2–3 min window+watermark delay (wait), or the click landed on a shard with no consumer running (run both shards), or you re-used a <code>cid</code> (dedup working as intended)</td></tr>
+  <tr><td>billing-api exits immediately</td><td><code>OPS_TOKEN is required</code> at startup → <code>OPS_TOKEN=dev-ops-token pnpm --filter @app/billing-api start</code></td></tr>
+  <tr><td>Everything is broken and you want a clean slate</td><td><code>docker compose down -v &amp;&amp; docker compose up -d</code>, then re-run bootstrap → migrate → seed (containers are intentionally disposable)</td></tr>
+</table>
+
+<!-- ================================================================ -->
+<h2 id="glossary"><span class="num">10</span>Glossary</h2>
+<table>
+  <tr><th>Term</th><th>Meaning here</th></tr>
+  <tr><td><strong>cid</strong></td><td>Click ID — the unique, client-minted identifier of one click; the dedup key for everything.</td></tr>
+  <tr><td><strong>At-least-once delivery</strong></td><td>The guarantee streams actually give you: nothing is lost, but things may arrive twice. The reason dedup exists.</td></tr>
+  <tr><td><strong>Idempotent</strong></td><td>Safe to do twice with the same result as once. Seeds, bootstraps, and reconciliation here are all idempotent on purpose.</td></tr>
+  <tr><td><strong>Shard</strong></td><td>One parallel lane of a Kinesis stream. One consumer process per shard.</td></tr>
+  <tr><td><strong>Partition key</strong></td><td>Decides which shard a record goes to. Salted here (<code>ad_id#0-7</code>) so one viral ad can't overload a single shard.</td></tr>
+  <tr><td><strong>Event time vs. processing time</strong></td><td>When the click <em>happened</em> vs. when we <em>saw</em> it. Counting uses event time; the gap between them is "lateness".</td></tr>
+  <tr><td><strong>Watermark</strong></td><td>How long a window waits for late events before flushing (2 minutes here).</td></tr>
+  <tr><td><strong>Control plane</strong></td><td>The slow-changing business data (advertisers, campaigns, ads, keys) in Postgres — as opposed to the high-volume click "data plane".</td></tr>
+  <tr><td><strong>Hot path</strong></td><td>Code in the way of a waiting user (the redirect). Everything else is deliberately kept out of it.</td></tr>
+  <tr><td><strong>Reconciliation</strong></td><td>The from-scratch recompute of exact billing numbers from the raw archive.</td></tr>
+  <tr><td><strong>Tenant isolation</strong></td><td>Advertiser A can never read (or even detect the existence of) advertiser B's data.</td></tr>
+  <tr><td><strong>DI / <code>buildApp(deps)</code></strong></td><td>Dependency injection — routes receive their collaborators as arguments, so tests pass fakes and never need real infrastructure.</td></tr>
+</table>
+
+</main>
+
+<footer>
+  <p>Companion guide to <code>index.html</code> (the system-design document) and the implementation in this repository. Design rationale per sub-project: <code>docs/superpowers/specs/</code> · build plans: <code>docs/superpowers/plans/</code>.</p>
+</footer>
+
+</body>
+</html>
