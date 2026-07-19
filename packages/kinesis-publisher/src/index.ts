@@ -1,6 +1,8 @@
 import { KinesisClient, PutRecordCommand } from '@aws-sdk/client-kinesis';
 import type { ClickEvent } from '@app/event-schema';
 
+export const CLICK_STREAM_NAME = 'ad-clicks-raw';
+
 export async function publishClickEvent(
   client: KinesisClient,
   streamName: string,

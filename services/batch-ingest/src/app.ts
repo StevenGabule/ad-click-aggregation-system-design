@@ -8,6 +8,9 @@ export interface BatchIngestDeps {
   publish: (event: ClickEvent) => Promise<void>;
 }
 
+const MAX_BATCH_SIZE = 1000;
+const PUBLISH_CONCURRENCY = 20;
+
 async function processEvent(deps: BatchIngestDeps, raw: unknown): Promise<boolean> {
   const parsed = ClickEventSchema.safeParse(raw);
   if (!parsed.success) return false;
@@ -25,6 +28,16 @@ async function processEvent(deps: BatchIngestDeps, raw: unknown): Promise<boolea
   }
 }
 
+// ponytail: chunked pool bounds in-flight PutRecords; swap for a sliding-window limiter if throughput demands
+async function processAllBounded(deps: BatchIngestDeps, events: unknown[]): Promise<boolean[]> {
+  const results: boolean[] = [];
+  for (let i = 0; i < events.length; i += PUBLISH_CONCURRENCY) {
+    const chunk = events.slice(i, i + PUBLISH_CONCURRENCY);
+    results.push(...(await Promise.all(chunk.map((event) => processEvent(deps, event)))));
+  }
+  return results;
+}
+
 export function buildApp(deps: BatchIngestDeps): FastifyInstance {
   const app = Fastify({ logger: true });
 
@@ -32,7 +45,11 @@ export function buildApp(deps: BatchIngestDeps): FastifyInstance {
     const body = req.body as { events?: unknown[] } | undefined;
     const events = Array.isArray(body?.events) ? body.events : [];
 
-    const results = await Promise.all(events.map((event) => processEvent(deps, event)));
+    if (events.length > MAX_BATCH_SIZE) {
+      return reply.code(413).send({ error: 'batch_too_large', maxBatchSize: MAX_BATCH_SIZE });
+    }
+
+    const results = await processAllBounded(deps, events);
     const accepted = results.filter(Boolean).length;
 
     reply.code(202).send({ accepted, rejected: results.length - accepted });

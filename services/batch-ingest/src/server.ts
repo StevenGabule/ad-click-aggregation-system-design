@@ -1,7 +1,7 @@
 import { KinesisClient } from '@aws-sdk/client-kinesis';
 import { prisma, listActiveAdDirectory } from '@app/db';
 import { createDirectoryCache } from '@app/directory-cache';
-import { publishClickEvent } from '@app/kinesis-publisher';
+import { publishClickEvent, CLICK_STREAM_NAME } from '@app/kinesis-publisher';
 import { loadEnv } from '@app/config';
 import { buildApp } from './app.js';
 
@@ -18,7 +18,7 @@ await directoryCache.start();
 
 const app = buildApp({
   directoryCache,
-  publish: (event) => publishClickEvent(kinesis, 'ad-clicks-raw', event),
+  publish: (event) => publishClickEvent(kinesis, CLICK_STREAM_NAME, event),
 });
 
 await app.listen({ port: Number(process.env.PORT ?? 3001), host: '0.0.0.0' });

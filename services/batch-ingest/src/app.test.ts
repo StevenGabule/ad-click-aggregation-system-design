@@ -77,4 +77,26 @@ describe('POST /v1/events/clicks', () => {
     expect(response.statusCode).toBe(202);
     expect(response.json()).toEqual({ accepted: 0, rejected: 0 });
   });
+
+  it('rejects an oversized batch with 413 before processing any events', async () => {
+    const { app, publish } = buildTestApp();
+    const events = Array.from({ length: 1001 }, () => ({}));
+
+    const response = await post(app, { events });
+
+    expect(response.statusCode).toBe(413);
+    expect(response.json()).toEqual({ error: 'batch_too_large', maxBatchSize: 1000 });
+    expect(publish).not.toHaveBeenCalled();
+  });
+
+  it('preserves accurate accounting for a valid batch larger than PUBLISH_CONCURRENCY', async () => {
+    const { app, publish } = buildTestApp();
+    const events = Array.from({ length: 25 }, (_, i) => validEvent({ cid: `clk_${i}` }));
+
+    const response = await post(app, { events });
+
+    expect(response.statusCode).toBe(202);
+    expect(response.json()).toEqual({ accepted: 25, rejected: 0 });
+    expect(publish).toHaveBeenCalledTimes(25);
+  });
 });
