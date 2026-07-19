@@ -29,12 +29,15 @@ async function main() {
   // day's partition (todayDateString() is computed at flush time, not at record-receive time).
   // Accepted limitation — reconciliation reads whole-day partitions so this is a rare, small
   // misfile, not a correctness gap in the dedup/billing math.
+  let flushing = false;
   setInterval(() => {
+    if (flushing) return;
     if (!buffer.shouldFlush(Date.now())) return;
+    flushing = true;
     const batch = buffer.drain();
-    archiveBatch(db, bucketPrefixForDate(todayDateString()), batch).catch((err) =>
-      console.error('archive flush failed, batch lost', { size: batch.length, err })
-    );
+    archiveBatch(db, bucketPrefixForDate(todayDateString()), batch)
+      .catch((err) => console.error('archive flush failed, batch lost', { size: batch.length, err }))
+      .finally(() => { flushing = false; });
   }, FLUSH_CHECK_INTERVAL_MS).unref();
 
   await runPollingConsumer({
