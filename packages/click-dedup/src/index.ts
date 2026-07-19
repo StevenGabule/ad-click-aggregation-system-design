@@ -1,14 +1,17 @@
-import type { RedisClientType } from 'redis';
 import { DynamoDBClient, PutItemCommand, ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb';
 
 export interface DedupStore {
   isNew(cid: string): Promise<boolean>;
 }
 
+export interface DedupRedis {
+  set(key: string, value: string, options: { NX: true; EX: number }): Promise<string | null>;
+}
+
 const DEDUP_TABLE_NAME = 'click-dedup';
 
 export function createDedupStore(
-  redis: RedisClientType,
+  redis: DedupRedis,
   dynamo: DynamoDBClient,
   options: { tableName?: string; windowSeconds?: number } = {}
 ): DedupStore {
