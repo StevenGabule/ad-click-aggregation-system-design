@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-kinesis": "^3.716.0",
-    "@aws-sdk/client-dynamodb": "^3.716.0"
+    "@aws-sdk/client-dynamodb": "^3.716.0",
+    "@aws-sdk/client-s3": "^3.716.0"
   },
   "devDependencies": {
     "tsx": "^4.19.2"

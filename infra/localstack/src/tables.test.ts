@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DynamoDBClient, DescribeTableCommand } from '@aws-sdk/client-dynamodb';
 import { ensureDedupTable, ensureHotAggregateTable, DEDUP_TABLE_NAME, HOT_AGGREGATE_TABLE_NAME } from './tables.js';
+import { ensureStatementsTable, STATEMENTS_TABLE_NAME } from './tables.js';
 
 function testClient(): DynamoDBClient {
   return new DynamoDBClient({
@@ -30,6 +31,21 @@ describe('DynamoDB table bootstrap', () => {
     expect(description.Table?.KeySchema).toEqual([
       { AttributeName: 'adId', KeyType: 'HASH' },
       { AttributeName: 'windowStart', KeyType: 'RANGE' },
+    ]);
+  }, 20_000);
+});
+
+describe('ensureStatementsTable', () => {
+  it('creates the statements table with a composite key, and is a no-op the second time', async () => {
+    const client = testClient();
+    await ensureStatementsTable(client);
+    await ensureStatementsTable(client);
+
+    const description = await client.send(new DescribeTableCommand({ TableName: STATEMENTS_TABLE_NAME }));
+    expect(description.Table?.TableStatus).toBe('ACTIVE');
+    expect(description.Table?.KeySchema).toEqual([
+      { AttributeName: 'campaignId', KeyType: 'HASH' },
+      { AttributeName: 'period', KeyType: 'RANGE' },
     ]);
   }, 20_000);
 });
