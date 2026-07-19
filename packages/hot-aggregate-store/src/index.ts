@@ -1,4 +1,4 @@
-import { DynamoDBClient, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, UpdateItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
 
 const HOT_AGGREGATE_TABLE_NAME = 'click-aggregates';
 const TTL_SECONDS = 48 * 3600;
@@ -27,5 +27,27 @@ export function createHotAggregateStore(
         },
       }));
     },
+  };
+}
+
+export async function getLatestAggregate(
+  dynamo: DynamoDBClient,
+  adId: string,
+  tableName: string = HOT_AGGREGATE_TABLE_NAME
+): Promise<{ windowStart: number; clicks: number } | null> {
+  const { Items } = await dynamo.send(new QueryCommand({
+    TableName: tableName,
+    KeyConditionExpression: 'adId = :adId',
+    ExpressionAttributeValues: { ':adId': { S: adId } },
+    ScanIndexForward: false,
+    Limit: 1,
+  }));
+
+  const item = Items?.[0];
+  if (!item) return null;
+
+  return {
+    windowStart: Number(item.windowStart.N),
+    clicks: Number(item.count.N),
   };
 }
