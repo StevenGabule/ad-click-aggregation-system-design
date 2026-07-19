@@ -6,6 +6,8 @@ import {
   ResourceNotFoundException,
   waitUntilStreamExists,
 } from '@aws-sdk/client-kinesis';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { ensureDedupTable, ensureHotAggregateTable } from './tables.js';
 
 const STREAM_NAME = 'ad-clicks-raw';
 const SHARD_COUNT = 2;
@@ -33,13 +35,22 @@ async function streamExists(client: KinesisClient): Promise<boolean> {
 }
 
 async function main() {
-  const client = new KinesisClient({
+  const kinesisClient = new KinesisClient({
     region: process.env.AWS_REGION ?? 'us-east-1',
     endpoint: process.env.AWS_ENDPOINT_URL ?? 'http://localhost:4566',
     credentials: { accessKeyId: 'test', secretAccessKey: 'test' },
   });
-  await ensureClickStream(client);
-  console.log(`Kinesis stream "${STREAM_NAME}" is ready.`);
+  await ensureClickStream(kinesisClient);
+
+  const dynamoClient = new DynamoDBClient({
+    region: process.env.AWS_REGION ?? 'us-east-1',
+    endpoint: process.env.AWS_ENDPOINT_URL ?? 'http://localhost:4566',
+    credentials: { accessKeyId: 'test', secretAccessKey: 'test' },
+  });
+  await ensureDedupTable(dynamoClient);
+  await ensureHotAggregateTable(dynamoClient);
+
+  console.log('LocalStack resources ready: Kinesis stream, dedup table, hot aggregate table.');
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
