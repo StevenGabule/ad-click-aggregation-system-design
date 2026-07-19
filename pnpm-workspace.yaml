@@ -5,4 +5,5 @@ packages:
 allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true
+  duckdb: true
   prisma: true
