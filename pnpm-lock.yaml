@@ -108,6 +108,9 @@ importers:
       '@app/hot-aggregate-store':
         specifier: workspace:*
         version: link:../../packages/hot-aggregate-store
+      '@app/kinesis-consumer-loop':
+        specifier: workspace:*
+        version: link:../../packages/kinesis-consumer-loop
       '@app/windowed-aggregator':
         specifier: workspace:*
         version: link:../../packages/windowed-aggregator
