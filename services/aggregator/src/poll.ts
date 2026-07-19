@@ -31,8 +31,13 @@ async function main() {
   const aggregator = createWindowedAggregator({ windowMs: 60_000, watermarkMs: 120_000 });
   const hotStore = createHotAggregateStore(dynamo);
 
+  let flushing = false;
   setInterval(() => {
-    flushClosedWindows(aggregator, hotStore, Date.now()).catch((err) => console.error('flush tick failed', err));
+    if (flushing) return;
+    flushing = true;
+    flushClosedWindows(aggregator, hotStore, Date.now())
+      .catch((err) => console.error('flush tick failed', err))
+      .finally(() => { flushing = false; });
   }, FLUSH_INTERVAL_MS).unref();
 
   let { ShardIterator: iterator } = await kinesis.send(new GetShardIteratorCommand({

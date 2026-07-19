@@ -20,18 +20,18 @@ export async function handleRecord(deps: ConsumerDeps, event: RawClickEvent): Pr
 }
 
 export async function flushClosedWindows(
-  aggregator: Pick<WindowedAggregator, 'peekClosedWindows' | 'removeWindow'>,
+  aggregator: Pick<WindowedAggregator, 'peekClosedWindows' | 'commitFlushed'>,
   hotStore: Pick<HotAggregateStore, 'flush'>,
   nowMs: number
 ): Promise<void> {
   for (const { windowStart, counts } of aggregator.peekClosedWindows(nowMs)) {
-    try {
-      for (const [adId, count] of counts) {
+    for (const [adId, count] of counts) {
+      try {
         await hotStore.flush(adId, windowStart, count);
+        aggregator.commitFlushed(windowStart, adId, count);
+      } catch (err) {
+        console.error('flush failed for adId, will retry next tick', { windowStart, adId, err });
       }
-      aggregator.removeWindow(windowStart);
-    } catch (err) {
-      console.error('flush failed for window, will retry next tick', { windowStart, err });
     }
   }
 }

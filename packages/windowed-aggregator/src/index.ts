@@ -7,6 +7,7 @@ export interface WindowedAggregator {
   record(adId: string, eventTimeMs: number): void;
   peekClosedWindows(nowMs: number): ClosedWindow[];
   removeWindow(windowStart: number): void;
+  commitFlushed(windowStart: number, adId: string, flushedCount: number): void;
 }
 
 export function createWindowedAggregator(options: { windowMs: number; watermarkMs: number }): WindowedAggregator {
@@ -28,12 +29,25 @@ export function createWindowedAggregator(options: { windowMs: number; watermarkM
       const closed: ClosedWindow[] = [];
       for (const [windowStart, counts] of windows) {
         if (windowStart + windowMs > closeBefore) continue;
-        closed.push({ windowStart, counts });
+        closed.push({ windowStart, counts: new Map(counts) });
       }
       return closed;
     },
     removeWindow(windowStart) {
       windows.delete(windowStart);
+    },
+    commitFlushed(windowStart, adId, flushedCount) {
+      const counts = windows.get(windowStart);
+      if (!counts) return;
+      const current = counts.get(adId);
+      if (current === undefined) return;
+      const remaining = current - flushedCount;
+      if (remaining > 0) {
+        counts.set(adId, remaining);
+      } else {
+        counts.delete(adId);
+        if (counts.size === 0) windows.delete(windowStart);
+      }
     },
   };
 }

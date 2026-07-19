@@ -62,4 +62,38 @@ describe('windowed-aggregator', () => {
     expect(closed).toHaveLength(1);
     expect(closed[0].counts.get('ad_1')).toBe(1);
   });
+
+  it('commitFlushed subtracts the flushed amount and leaves a remainder', () => {
+    const agg = createWindowedAggregator({ windowMs: WINDOW_MS, watermarkMs: WATERMARK_MS });
+    agg.record('ad_A', 1_000);
+    agg.record('ad_A', 2_000);
+    const now = WINDOW_MS + WATERMARK_MS + 1;
+
+    agg.commitFlushed(0, 'ad_A', 1);
+
+    const closed = agg.peekClosedWindows(now);
+    expect(closed).toHaveLength(1);
+    expect(closed[0].counts.get('ad_A')).toBe(1);
+  });
+
+  it('commitFlushed removes the adId and the empty window once its count reaches zero', () => {
+    const agg = createWindowedAggregator({ windowMs: WINDOW_MS, watermarkMs: WATERMARK_MS });
+    agg.record('ad_A', 1_000);
+    const now = WINDOW_MS + WATERMARK_MS + 1;
+
+    agg.commitFlushed(0, 'ad_A', 1);
+
+    expect(agg.peekClosedWindows(now)).toEqual([]);
+  });
+
+  it('peekClosedWindows returns a defensive copy — mutating it does not corrupt internal state', () => {
+    const agg = createWindowedAggregator({ windowMs: WINDOW_MS, watermarkMs: WATERMARK_MS });
+    agg.record('ad_A', 1_000);
+    const now = WINDOW_MS + WATERMARK_MS + 1;
+
+    const closed = agg.peekClosedWindows(now);
+    closed[0].counts.set('ad_A', 999);
+
+    expect(agg.peekClosedWindows(now)[0].counts.get('ad_A')).toBe(1);
+  });
 });

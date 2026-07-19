@@ -1,5 +1,10 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { createWindowedAggregator } from '@app/windowed-aggregator';
 import { handleRecord, flushClosedWindows } from './core.js';
+
+const WINDOW_MS = 60_000;
+const WATERMARK_MS = 120_000;
+const PAST_WATERMARK = WINDOW_MS + WATERMARK_MS + 1;
 
 describe('handleRecord', () => {
   it('records the event when the dedup store says it is new', async () => {
@@ -26,46 +31,65 @@ describe('flushClosedWindows', () => {
   beforeEach(() => { errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {}); });
   afterEach(() => { errorSpy.mockRestore(); });
 
-  it('flushes every (adId, count) pair per closed window, then removes the window', async () => {
-    const closedWindows = [{ windowStart: 0, counts: new Map([['ad_1', 3], ['ad_2', 1]]) }];
-    const peekClosedWindows = vi.fn().mockReturnValue(closedWindows);
-    const removeWindow = vi.fn();
+  // nowMs at which a window opened at `windowStart` is guaranteed closed.
+  function pastWatermarkFor(windowStart: number): number {
+    return windowStart + WINDOW_MS + WATERMARK_MS + 1;
+  }
+
+  it('flushes every (adId,count) pair and empties the window on success', async () => {
+    const aggregator = createWindowedAggregator({ windowMs: WINDOW_MS, watermarkMs: WATERMARK_MS });
+    aggregator.record('ad_A', 1_000);
+    aggregator.record('ad_A', 2_000);
+    aggregator.record('ad_B', 3_000);
     const flush = vi.fn().mockResolvedValue(undefined);
 
-    await flushClosedWindows({ peekClosedWindows, removeWindow }, { flush }, 999_999);
+    await flushClosedWindows(aggregator, { flush }, pastWatermarkFor(0));
 
-    expect(flush).toHaveBeenCalledWith('ad_1', 0, 3);
-    expect(flush).toHaveBeenCalledWith('ad_2', 0, 1);
-    expect(removeWindow).toHaveBeenCalledWith(0);
+    expect(flush).toHaveBeenCalledWith('ad_A', 0, 2);
+    expect(flush).toHaveBeenCalledWith('ad_B', 0, 1);
+    expect(aggregator.peekClosedWindows(pastWatermarkFor(0))).toEqual([]);
   });
 
-  it('does not remove a window whose flush fails, so it can retry next tick', async () => {
-    const closedWindows = [{ windowStart: 0, counts: new Map([['ad_1', 3]]) }];
-    const peekClosedWindows = vi.fn().mockReturnValue(closedWindows);
-    const removeWindow = vi.fn();
-    const flush = vi.fn().mockRejectedValue(new Error('DynamoDB unavailable'));
+  it('does not double-count an already-flushed adId when a sibling fails then retries', async () => {
+    const aggregator = createWindowedAggregator({ windowMs: WINDOW_MS, watermarkMs: WATERMARK_MS });
+    aggregator.record('ad_A', 1_000);
+    aggregator.record('ad_A', 2_000);
+    aggregator.record('ad_B', 3_000);
 
-    await flushClosedWindows({ peekClosedWindows, removeWindow }, { flush }, 999_999);
+    let failB = true;
+    const flush = vi.fn().mockImplementation(async (adId: string) => {
+      if (adId === 'ad_B' && failB) throw new Error('DynamoDB throttled');
+    });
 
-    expect(removeWindow).not.toHaveBeenCalled();
+    // tick 1: ad_A flushes and commits; ad_B throws and is left in the window for retry.
+    await flushClosedWindows(aggregator, { flush }, pastWatermarkFor(0));
+
+    failB = false;
+    // tick 2: ad_B retries and succeeds. ad_A must NOT be re-flushed.
+    await flushClosedWindows(aggregator, { flush }, pastWatermarkFor(0));
+
+    const adACalls = flush.mock.calls.filter((c) => c[0] === 'ad_A');
+    expect(adACalls).toHaveLength(1);
+    expect(adACalls).toEqual([['ad_A', 0, 2]]);
   });
 
-  it('removes other windows even when one window fails, and does not remove the failed one', async () => {
-    const closedWindows = [
-      { windowStart: 0, counts: new Map([['ad_fail', 1]]) },
-      { windowStart: 60_000, counts: new Map([['ad_ok', 2]]) },
-    ];
-    const peekClosedWindows = vi.fn().mockReturnValue(closedWindows);
-    const removeWindow = vi.fn();
+  it('isolates failures across windows', async () => {
+    const aggregator = createWindowedAggregator({ windowMs: WINDOW_MS, watermarkMs: WATERMARK_MS });
+    aggregator.record('ad_fail', 1_000);
+    aggregator.record('ad_ok', 60_000 + 1_000);
+
     const flush = vi.fn().mockImplementation(async (adId: string) => {
       if (adId === 'ad_fail') throw new Error('DynamoDB unavailable');
     });
 
-    await flushClosedWindows({ peekClosedWindows, removeWindow }, { flush }, 999_999);
+    const now = pastWatermarkFor(60_000);
+    await flushClosedWindows(aggregator, { flush }, now);
 
-    // window 0 failed -> not removed (retried next tick); window 60_000 succeeded -> removed
-    expect(removeWindow).toHaveBeenCalledWith(60_000);
-    expect(removeWindow).not.toHaveBeenCalledWith(0);
-    expect(removeWindow).toHaveBeenCalledTimes(1);
+    expect(flush).toHaveBeenCalledWith('ad_ok', 60_000, 1);
+
+    const closed = aggregator.peekClosedWindows(now);
+    expect(closed).toHaveLength(1);
+    expect(closed[0].windowStart).toBe(0);
+    expect(closed[0].counts.get('ad_fail')).toBe(1);
   });
 });
