@@ -9,6 +9,14 @@ export async function getAdOwnerAdvertiserId(client: PrismaClient, adId: string)
   return ad?.campaign.advertiserId ?? null;
 }
 
+export async function getCampaignOwnerAdvertiserId(client: PrismaClient, campaignId: string): Promise<string | null> {
+  const campaign = await client.campaign.findUnique({
+    where: { id: campaignId },
+    select: { advertiserId: true },
+  });
+  return campaign?.advertiserId ?? null;
+}
+
 export async function resolveApiKey(client: PrismaClient, rawKey: string): Promise<{ advertiserId: string } | null> {
   const hashedKey = createHash('sha256').update(rawKey).digest('hex');
   const apiKey = await client.apiKey.findUnique({

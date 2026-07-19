@@ -1,17 +1,21 @@
 {
-  "name": "@app/infra-localstack",
+  "name": "@app/billing-api",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "bootstrap": "tsx src/bootstrap.ts",
+    "start": "tsx src/server.ts",
+    "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@aws-sdk/client-kinesis": "^3.716.0",
+    "fastify": "^5.2.0",
     "@aws-sdk/client-dynamodb": "^3.716.0",
-    "@aws-sdk/client-s3": "^3.716.0"
+    "@app/db": "workspace:*",
+    "@app/statements-store": "workspace:*",
+    "@app/parquet-archive": "workspace:*",
+    "@app/config": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.19.2"

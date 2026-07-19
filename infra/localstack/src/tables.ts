@@ -61,3 +61,22 @@ export async function ensureHotAggregateTable(client: DynamoDBClient): Promise<v
     TimeToLiveSpecification: { AttributeName: 'expiresAt', Enabled: true },
   }));
 }
+
+export const STATEMENTS_TABLE_NAME = 'click-statements';
+
+export async function ensureStatementsTable(client: DynamoDBClient): Promise<void> {
+  if (await tableExists(client, STATEMENTS_TABLE_NAME)) return;
+
+  await client.send(new CreateTableCommand({
+    TableName: STATEMENTS_TABLE_NAME,
+    AttributeDefinitions: [
+      { AttributeName: 'campaignId', AttributeType: 'S' },
+      { AttributeName: 'period', AttributeType: 'S' },
+    ],
+    KeySchema: [
+      { AttributeName: 'campaignId', KeyType: 'HASH' },
+      { AttributeName: 'period', KeyType: 'RANGE' },
+    ],
+    BillingMode: 'PAY_PER_REQUEST',
+  }));
+}

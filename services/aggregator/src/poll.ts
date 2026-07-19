@@ -1,6 +1,7 @@
-import { KinesisClient, GetShardIteratorCommand, GetRecordsCommand } from '@aws-sdk/client-kinesis';
+import { KinesisClient } from '@aws-sdk/client-kinesis';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { createClient as createRedisClient } from 'redis';
+import { runPollingConsumer } from '@app/kinesis-consumer-loop';
 import { createDedupStore } from '@app/click-dedup';
 import { createWindowedAggregator } from '@app/windowed-aggregator';
 import { createHotAggregateStore } from '@app/hot-aggregate-store';
@@ -8,7 +9,6 @@ import { loadEnv } from '@app/config';
 import { handleRecord, flushClosedWindows, type RawClickEvent } from './core.js';
 
 const STREAM_NAME = 'ad-clicks-raw';
-const POLL_INTERVAL_MS = 1000;
 const FLUSH_INTERVAL_MS = 5000;
 
 async function main() {
@@ -40,29 +40,15 @@ async function main() {
       .finally(() => { flushing = false; });
   }, FLUSH_INTERVAL_MS).unref();
 
-  let { ShardIterator: iterator } = await kinesis.send(new GetShardIteratorCommand({
-    StreamName: STREAM_NAME,
-    ShardId: shardId,
-    ShardIteratorType: 'LATEST',
-  }));
-
-  while (iterator) {
-    const { Records, NextShardIterator } = await kinesis.send(new GetRecordsCommand({ ShardIterator: iterator }));
-
-    for (const record of Records ?? []) {
-      try {
-        const event = JSON.parse(Buffer.from(record.Data!).toString('utf-8')) as RawClickEvent;
-        await handleRecord({ dedupStore, aggregator }, event);
-      } catch (err) {
-        console.error('failed to process record, skipping', { sequenceNumber: record.SequenceNumber, err });
-      }
-    }
-
-    iterator = NextShardIterator;
-    if (!Records || Records.length === 0) {
-      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-    }
-  }
+  await runPollingConsumer({
+    kinesis,
+    streamName: STREAM_NAME,
+    shardId,
+    onRecord: async (data) => {
+      const event = JSON.parse(data.toString('utf-8')) as RawClickEvent;
+      await handleRecord({ dedupStore, aggregator }, event);
+    },
+  });
 }
 
 main().catch((err) => {

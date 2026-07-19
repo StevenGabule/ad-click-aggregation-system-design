@@ -16,7 +16,8 @@
     "@app/click-dedup": "workspace:*",
     "@app/windowed-aggregator": "workspace:*",
     "@app/hot-aggregate-store": "workspace:*",
-    "@app/config": "workspace:*"
+    "@app/config": "workspace:*",
+    "@app/kinesis-consumer-loop": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.19.2"
