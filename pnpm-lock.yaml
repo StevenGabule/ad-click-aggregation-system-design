@@ -70,6 +70,8 @@ importers:
         specifier: ^3.716.0
         version: 3.1089.0
 
+  packages/windowed-aggregator: {}
+
   services/batch-ingest:
     dependencies:
       '@app/click-signature':
