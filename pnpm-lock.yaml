@@ -137,6 +137,25 @@ importers:
         specifier: ^4.19.2
         version: 4.23.1
 
+  services/archiver:
+    dependencies:
+      '@app/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@app/kinesis-consumer-loop':
+        specifier: workspace:*
+        version: link:../../packages/kinesis-consumer-loop
+      '@app/parquet-archive':
+        specifier: workspace:*
+        version: link:../../packages/parquet-archive
+      '@aws-sdk/client-kinesis':
+        specifier: ^3.716.0
+        version: 3.1089.0
+    devDependencies:
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.1
+
   services/batch-ingest:
     dependencies:
       '@app/click-signature':
