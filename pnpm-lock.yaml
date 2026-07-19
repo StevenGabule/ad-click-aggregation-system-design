@@ -80,6 +80,12 @@ importers:
         specifier: ^3.716.0
         version: 3.1090.0
 
+  packages/kinesis-consumer-loop:
+    dependencies:
+      '@aws-sdk/client-kinesis':
+        specifier: ^3.716.0
+        version: 3.1089.0
+
   packages/kinesis-publisher:
     dependencies:
       '@app/event-schema':
