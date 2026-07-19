@@ -1,0 +1,25 @@
+{
+  "name": "@app/batch-ingest",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "fastify": "^5.2.0",
+    "@aws-sdk/client-kinesis": "^3.716.0",
+    "@app/event-schema": "workspace:*",
+    "@app/click-signature": "workspace:*",
+    "@app/directory-cache": "workspace:*",
+    "@app/kinesis-publisher": "workspace:*",
+    "@app/db": "workspace:*",
+    "@app/config": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}
