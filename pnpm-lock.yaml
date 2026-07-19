@@ -91,6 +91,34 @@ importers:
 
   packages/windowed-aggregator: {}
 
+  services/aggregator:
+    dependencies:
+      '@app/click-dedup':
+        specifier: workspace:*
+        version: link:../../packages/click-dedup
+      '@app/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@app/hot-aggregate-store':
+        specifier: workspace:*
+        version: link:../../packages/hot-aggregate-store
+      '@app/windowed-aggregator':
+        specifier: workspace:*
+        version: link:../../packages/windowed-aggregator
+      '@aws-sdk/client-dynamodb':
+        specifier: ^3.716.0
+        version: 3.1090.0
+      '@aws-sdk/client-kinesis':
+        specifier: ^3.716.0
+        version: 3.1089.0
+      redis:
+        specifier: ^4.7.0
+        version: 4.7.1
+    devDependencies:
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.1
+
   services/batch-ingest:
     dependencies:
       '@app/click-signature':
