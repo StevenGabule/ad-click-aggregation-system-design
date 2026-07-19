@@ -181,6 +181,28 @@ importers:
         specifier: ^4.19.2
         version: 4.23.1
 
+  services/query-api:
+    dependencies:
+      '@app/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@app/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@app/hot-aggregate-store':
+        specifier: workspace:*
+        version: link:../../packages/hot-aggregate-store
+      '@aws-sdk/client-dynamodb':
+        specifier: ^3.716.0
+        version: 3.1090.0
+      fastify:
+        specifier: ^5.2.0
+        version: 5.10.0
+    devDependencies:
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.1
+
 packages:
 
   '@aws-sdk/client-dynamodb@3.1090.0':
