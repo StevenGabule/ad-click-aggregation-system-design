@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { handleRecord, flushClosedWindows } from './core.js';
 
 describe('handleRecord', () => {
@@ -22,6 +22,10 @@ describe('handleRecord', () => {
 });
 
 describe('flushClosedWindows', () => {
+  let errorSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => { errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {}); });
+  afterEach(() => { errorSpy.mockRestore(); });
+
   it('flushes every (adId, count) pair per closed window, then removes the window', async () => {
     const closedWindows = [{ windowStart: 0, counts: new Map([['ad_1', 3], ['ad_2', 1]]) }];
     const peekClosedWindows = vi.fn().mockReturnValue(closedWindows);
@@ -44,5 +48,24 @@ describe('flushClosedWindows', () => {
     await flushClosedWindows({ peekClosedWindows, removeWindow }, { flush }, 999_999);
 
     expect(removeWindow).not.toHaveBeenCalled();
+  });
+
+  it('removes other windows even when one window fails, and does not remove the failed one', async () => {
+    const closedWindows = [
+      { windowStart: 0, counts: new Map([['ad_fail', 1]]) },
+      { windowStart: 60_000, counts: new Map([['ad_ok', 2]]) },
+    ];
+    const peekClosedWindows = vi.fn().mockReturnValue(closedWindows);
+    const removeWindow = vi.fn();
+    const flush = vi.fn().mockImplementation(async (adId: string) => {
+      if (adId === 'ad_fail') throw new Error('DynamoDB unavailable');
+    });
+
+    await flushClosedWindows({ peekClosedWindows, removeWindow }, { flush }, 999_999);
+
+    // window 0 failed -> not removed (retried next tick); window 60_000 succeeded -> removed
+    expect(removeWindow).toHaveBeenCalledWith(60_000);
+    expect(removeWindow).not.toHaveBeenCalledWith(0);
+    expect(removeWindow).toHaveBeenCalledTimes(1);
   });
 });
