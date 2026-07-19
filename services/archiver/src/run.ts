@@ -25,17 +25,32 @@ async function main() {
   const db = await createArchiveDb(env);
   const buffer = createBatchBuffer<RawArchiveEvent>({ maxSize: 500, maxAgeMs: 30_000 });
 
-  // ponytail: a batch flushing near UTC midnight can file a few stragglers under the wrong
-  // day's partition (todayDateString() is computed at flush time, not at record-receive time).
-  // Accepted limitation — reconciliation reads whole-day partitions so this is a rare, small
-  // misfile, not a correctness gap in the dedup/billing math.
+  // Partition each drained batch by the event's OWN event-time date (from `ts`), not flush time,
+  // so an at-least-once duplicate of a cid that straddles UTC midnight always lands in the same
+  // date partition — reconciliation's COUNT(DISTINCT cid) then dedups it (a flush-time partition
+  // would double-count it across two daily statements). A malformed/absent ts falls back to today.
+  function dateForEvent(event: RawArchiveEvent): string {
+    return /^\d{4}-\d{2}-\d{2}/.test(event.ts) ? event.ts.slice(0, 10) : todayDateString();
+  }
+
   let flushing = false;
   setInterval(() => {
     if (flushing) return;
     if (!buffer.shouldFlush(Date.now())) return;
     flushing = true;
     const batch = buffer.drain();
-    archiveBatch(db, bucketPrefixForDate(todayDateString()), batch)
+    const byDate = new Map<string, RawArchiveEvent[]>();
+    for (const event of batch) {
+      const date = dateForEvent(event);
+      const group = byDate.get(date) ?? byDate.set(date, []).get(date)!;
+      group.push(event);
+    }
+    // sequential per-date writes (archiveBatch is not concurrency-safe on its shared temp table)
+    (async () => {
+      for (const [date, events] of byDate) {
+        await archiveBatch(db, bucketPrefixForDate(date), events);
+      }
+    })()
       .catch((err) => console.error('archive flush failed, batch lost', { size: batch.length, err }))
       .finally(() => { flushing = false; });
   }, FLUSH_CHECK_INTERVAL_MS).unref();
