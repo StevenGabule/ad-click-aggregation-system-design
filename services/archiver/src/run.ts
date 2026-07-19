@@ -39,14 +39,18 @@ async function main() {
     if (!buffer.shouldFlush(Date.now())) return;
     flushing = true;
     const batch = buffer.drain();
-    const byDate = new Map<string, RawArchiveEvent[]>();
-    for (const event of batch) {
-      const date = dateForEvent(event);
-      const group = byDate.get(date) ?? byDate.set(date, []).get(date)!;
-      group.push(event);
-    }
-    // sequential per-date writes (archiveBatch is not concurrency-safe on its shared temp table)
     (async () => {
+      const byDate = new Map<string, RawArchiveEvent[]>();
+      for (const event of batch) {
+        const date = dateForEvent(event);
+        let group = byDate.get(date);
+        if (!group) {
+          group = [];
+          byDate.set(date, group);
+        }
+        group.push(event);
+      }
+      // sequential per-date writes (archiveBatch is not concurrency-safe on its shared temp table)
       for (const [date, events] of byDate) {
         await archiveBatch(db, bucketPrefixForDate(date), events);
       }
