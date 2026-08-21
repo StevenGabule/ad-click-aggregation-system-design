@@ -6,12 +6,13 @@ Every click a user makes must become **exactly one** row on an invoice — not z
 
 ---
 
-## Two documents, one system
+## Three documents, one system
 
 | File | What it is |
 | --- | --- |
 | **[`index.html`](index.html)** | The **system-design writeup** — requirements, capacity estimation, API design, deep dives (idempotency, late data, hot keys, fraud, sketches), trade-offs, cost model. Open it in a browser; read it like a technical blog post. |
 | **[`guide.html`](guide.html)** | A **hands-on beginner's guide** — assumes no monorepo or AWS background. Explains every concept, walks the full local setup, and traces one real click through the entire pipeline. **Start here if you want to run it.** |
+| **[`tutorial.html`](tutorial.html)** | A **build-it-yourself tutorial, in Tagalog** — 13 steps that reconstruct the whole backend from an empty folder, in the order it was actually built (SP1 → SP6), with the design rationale and the review-caught bugs at each step. **Start here if you want to build it.** |
 | **The code** | The design, actually built — under `packages/`, `services/`, and `infra/`. |
 
 ---
@@ -172,6 +173,7 @@ Known deferrals (tracked, out of scope for a local-first build): consumer resili
 
 - **[`index.html`](index.html)** — the system-design document (the "why" and the numbers).
 - **[`guide.html`](guide.html)** — the hands-on guide: concepts primer, full setup, a click's journey, troubleshooting, glossary.
+- **[`tutorial.html`](tutorial.html)** — the step-by-step build tutorial in Tagalog: 13 steps from empty folder to billing statement, one sub-project at a time.
 - **[`CLAUDE.md`](CLAUDE.md)** — contributor notes and the bootstrap sequence.
 - **`docs/superpowers/specs/`** — per-sub-project design specs (what to build and why).
 - **`docs/superpowers/plans/`** — per-sub-project TDD implementation plans.

@@ -1,0 +1,2944 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Buuin ang Click Pipeline</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='13' font-size='13'%3E%F0%9F%9B%A0%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+<style>
+/* Self-contained, walang external resources — kapareho ng index.html at guide.html.
+   Design tokens: hiniram sa guide.html para magmukhang magkapamilya ang tatlong dokumento. */
+:root {
+  color-scheme: light;
+  --bg: #FCFDFD; --bg-soft: #F1F5F6; --ink: #16292E; --ink-soft: #46626A; --ink-faint: #6E8A90;
+  --accent: #0B7C93; --accent-soft: #E2F3F7; --border: #D8E4E7;
+  --good: #1C7C43; --good-bg: #E5F5EB; --warn: #8A5A00; --warn-bg: #FBF1DC;
+  --code-bg: #0E2227; --code-head: #0A191D; --code-ink: #D9EDF2; --code-border: #1E3239;
+  --mark-bg: #FFF3C4;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0B1519; --bg-soft: #101E23; --ink: #DEEDF0; --ink-soft: #9DBAC0; --ink-faint: #6E8A90;
+    --accent: #2DD4EF; --accent-soft: #0E2A31; --border: #1E3239;
+    --good: #4CC97A; --good-bg: #0F2A1A; --warn: #E5B458; --warn-bg: #2A2210;
+    --code-bg: #081418; --code-head: #060F13; --code-ink: #C9E4EA; --code-border: #16262C;
+    --mark-bg: #4a3d10;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0B1519; --bg-soft: #101E23; --ink: #DEEDF0; --ink-soft: #9DBAC0; --ink-faint: #6E8A90;
+  --accent: #2DD4EF; --accent-soft: #0E2A31; --border: #1E3239;
+  --good: #4CC97A; --good-bg: #0F2A1A; --warn: #E5B458; --warn-bg: #2A2210;
+  --code-bg: #081418; --code-head: #060F13; --code-ink: #C9E4EA; --code-border: #16262C;
+  --mark-bg: #4a3d10;
+}
+* { box-sizing: border-box; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+a { color: var(--accent); }
+strong { color: var(--ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- Masthead ---------- */
+header.masthead { border-bottom: 1px solid var(--border); background: var(--bg-soft); }
+header.masthead .inner { max-width: 75rem; margin: 0 auto; padding: 2.6rem 1.25rem 2rem; }
+.eyebrow { font-size: .78rem; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin: 0 0 .6rem; }
+h1 { font-size: clamp(1.65rem, 4vw, 2.4rem); line-height: 1.15; margin: 0 0 .8rem; text-wrap: balance; }
+.subtitle { color: var(--ink-soft); max-width: 52rem; margin: 0 0 1rem; font-size: 1.05rem; }
+.chips { margin: .4rem 0 0; }
+.pill { display: inline-block; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: .05rem .6rem; font-size: .78rem; color: var(--ink-soft); margin: 0 .2rem .35rem 0; white-space: nowrap; }
+
+/* ---------- Layout: sticky sidebar + content ---------- */
+.layout { max-width: 75rem; margin: 0 auto; padding: 1.5rem 1.25rem 5rem; display: grid; grid-template-columns: 17.5rem minmax(0, 1fr); gap: 2.75rem; align-items: start; }
+nav.steps-nav { position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow-y: auto; padding-right: .25rem; }
+@media (max-width: 920px) {
+  .layout { grid-template-columns: 1fr; gap: 1.5rem; }
+  nav.steps-nav { position: static; max-height: none; }
+}
+nav.steps-nav .nav-title { font-weight: 700; font-size: .8rem; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 .5rem; }
+.progress { margin: 0 0 .9rem; }
+.progress .ptext { font-size: .8rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.progress .bar { height: 5px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 99px; margin-top: .3rem; overflow: hidden; }
+.progress .bar i { display: block; height: 100%; width: 0%; background: var(--good); border-radius: 99px; transition: width .25s; }
+nav.steps-nav ol { list-style: none; margin: 0; padding: 0; }
+nav.steps-nav li { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: .3rem; }
+a.step-link { display: flex; align-items: baseline; gap: .5rem; padding: .32rem .5rem; border-radius: 7px; text-decoration: none; color: var(--ink-soft); font-size: .9rem; min-width: 0; }
+a.step-link:hover { background: var(--bg-soft); color: var(--ink); }
+a.step-link[aria-current="true"] { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+a.step-link .sn { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .74rem; color: var(--accent); flex: none; }
+a.step-link .spb { margin-left: auto; flex: none; font-size: .62rem; font-weight: 700; letter-spacing: .05em; color: var(--ink-faint); border: 1px solid var(--border); border-radius: 999px; padding: 0 .38rem; }
+nav.steps-nav input[type="checkbox"] { accent-color: var(--good); width: .95rem; height: .95rem; margin: 0 .1rem 0 0; cursor: pointer; }
+.theme-btns { display: flex; gap: .35rem; margin: 1rem 0 0; flex-wrap: wrap; }
+.theme-btns button { font: inherit; font-size: .74rem; padding: .18rem .6rem; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); color: var(--ink-soft); cursor: pointer; }
+.theme-btns button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); font-weight: 600; }
+
+/* ---------- Content ---------- */
+main { min-width: 0; }
+main > section { scroll-margin-top: 1rem; padding-bottom: 2.2rem; }
+main > section + section { border-top: 1px solid var(--border); padding-top: 1.6rem; }
+.step-head { display: flex; align-items: baseline; gap: .8rem; flex-wrap: wrap; margin: 0 0 .4rem; }
+.step-head .big-num { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 1.9rem; font-weight: 700; color: var(--accent); }
+.step-head h2 { font-size: 1.45rem; margin: 0; text-wrap: balance; }
+.sp-badge { font-size: .68rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 999px; padding: .08rem .55rem; white-space: nowrap; }
+.step-goal { color: var(--ink-soft); margin: 0 0 1.1rem; max-width: 46rem; }
+h3 { font-size: 1.1rem; margin: 1.7rem 0 .5rem; }
+p, li { max-width: 46rem; }
+li { margin: .3rem 0; }
+code {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .875em;
+  background: var(--bg-soft); border: 1px solid var(--border); border-radius: 4px; padding: .08em .35em;
+  overflow-wrap: anywhere; /* mahahabang identifier sa prose ay pumuputol kaysa magdulot ng sideways scroll */
+}
+figure.code { margin: 1.1rem 0; border-radius: 9px; overflow: hidden; border: 1px solid var(--code-border); }
+figure.code > figcaption {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  background: var(--code-head); color: #7fa3ad; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: .72rem; padding: .38rem .8rem;
+}
+figure.code button.copy-btn {
+  font: inherit; color: #9fc5cf; background: none; border: 1px solid #2a4750; border-radius: 5px;
+  padding: .1rem .55rem; cursor: pointer; flex: none;
+}
+figure.code button.copy-btn:hover { color: #d9edf2; border-color: #9fc5cf; }
+figure.code pre { margin: 0; border-radius: 0; }
+pre {
+  background: var(--code-bg); color: var(--code-ink); border-radius: 8px;
+  padding: .85rem 1rem; overflow-x: auto; line-height: 1.55; font-size: .82rem;
+}
+pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; overflow-wrap: normal; }
+pre .c { color: #6E9AA5; }           /* komento */
+pre .add { color: #7CE0A3; }         /* bagong linya sa isang diff */
+pre.diagram { line-height: 1.34; font-size: .76rem; border: 1px solid var(--code-border); }
+mark { background: var(--mark-bg); color: inherit; border-radius: 3px; padding: 0 .2em; }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .9rem; }
+th, td { border: 1px solid var(--border); padding: .45rem .65rem; text-align: left; vertical-align: top; }
+th { background: var(--bg-soft); font-size: .76rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); }
+.tablewrap { overflow-x: auto; }
+.note, .warn, .why { border-radius: 8px; padding: .8rem 1.05rem; margin: 1.1rem 0; border: 1px solid; max-width: 46rem; }
+.note { background: var(--accent-soft); border-color: var(--accent); }
+.warn { background: var(--warn-bg); border-color: var(--warn); }
+.why  { background: var(--good-bg); border-color: var(--good); }
+.note > .label, .warn > .label, .why > .label { display: block; font-size: .7rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; margin-bottom: .3rem; }
+.note > .label { color: var(--accent); } .warn > .label { color: var(--warn); } .why > .label { color: var(--good); }
+.note :last-child, .warn :last-child, .why :last-child { margin-bottom: 0; }
+.checkpoint { border: 1.5px dashed var(--accent); background: var(--bg-soft); border-radius: 9px; padding: .9rem 1.1rem; margin: 1.4rem 0; }
+.checkpoint > .label { display: block; font-size: .72rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: .4rem; }
+.checkpoint :last-child { margin-bottom: 0; }
+.pager { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2rem; font-size: .9rem; }
+.pager a { text-decoration: none; border: 1px solid var(--border); border-radius: 8px; padding: .45rem .8rem; background: var(--bg-soft); }
+.pager a:hover { border-color: var(--accent); }
+kbd { font-family: ui-monospace, monospace; font-size: .8em; background: var(--bg-soft); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: .1em .45em; }
+footer { max-width: 75rem; margin: 0 auto; padding: 1.2rem 1.25rem 3rem; color: var(--ink-faint); font-size: .85rem; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="inner">
+    <p class="eyebrow">Gabay sa pagbuo · Hakbang-hakbang · Mula zero hanggang billing</p>
+    <h1>Buuin ang Ad Click Aggregation Pipeline</h1>
+    <p class="subtitle">Ito ang gabay kung <strong>paano buuin</strong> ang buong backend na ito mula sa wala — sa wikang Tagalog, sa pagkakasunod-sunod na aktwal na pinagbuuan nito. Ang <a href="index.html">index.html</a> ang disenyo sa papel, ang <a href="guide.html">guide.html</a> ang gabay sa pagpapatakbo; <strong>dito, tayo mismo ang magtatayo nito</strong>, isang sub-project bawat pagkakataon, na parang katabi mo ang senior engineer ng proyekto.</p>
+    <div class="chips">
+      <span class="pill">Node.js 24</span><span class="pill">TypeScript strict + ESM</span><span class="pill">pnpm workspaces</span><span class="pill">Fastify 5</span><span class="pill">Zod</span><span class="pill">Kinesis</span><span class="pill">DynamoDB</span><span class="pill">Redis</span><span class="pill">S3 + Parquet</span><span class="pill">DuckDB</span><span class="pill">Prisma + Postgres</span><span class="pill">LocalStack</span><span class="pill">Vitest · 85 tests</span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+
+<nav class="steps-nav" aria-label="Mga hakbang">
+  <p class="nav-title">Mga Hakbang</p>
+  <div class="progress">
+    <span class="ptext" id="prog-text">0/13 tapos</span>
+    <div class="bar"><i id="prog-bar"></i></div>
+  </div>
+  <ol>
+    <li><a class="step-link" href="#misyon"><span class="sn">00</span>Ang Misyon</a><input type="checkbox" data-step="misyon" aria-label="Markahang tapos: Ang Misyon"></li>
+    <li><a class="step-link" href="#handa"><span class="sn">01</span>Ihanda ang Makina</a><input type="checkbox" data-step="handa" aria-label="Markahang tapos: Ihanda ang Makina"></li>
+    <li><a class="step-link" href="#skeleton"><span class="sn">02</span>Monorepo Skeleton<span class="spb">SP1</span></a><input type="checkbox" data-step="skeleton" aria-label="Markahang tapos: Monorepo Skeleton"></li>
+    <li><a class="step-link" href="#kontrata"><span class="sn">03</span>Ang Kontrata<span class="spb">SP1</span></a><input type="checkbox" data-step="kontrata" aria-label="Markahang tapos: Ang Kontrata"></li>
+    <li><a class="step-link" href="#imprastraktura"><span class="sn">04</span>Lokal na AWS<span class="spb">SP1</span></a><input type="checkbox" data-step="imprastraktura" aria-label="Markahang tapos: Lokal na AWS"></li>
+    <li><a class="step-link" href="#controlplane"><span class="sn">05</span>Control Plane<span class="spb">SP1</span></a><input type="checkbox" data-step="controlplane" aria-label="Markahang tapos: Control Plane"></li>
+    <li><a class="step-link" href="#ingestion"><span class="sn">06</span>Ingestion APIs<span class="spb">SP2</span></a><input type="checkbox" data-step="ingestion" aria-label="Markahang tapos: Ingestion APIs"></li>
+    <li><a class="step-link" href="#fastlane"><span class="sn">07</span>Fast Lane<span class="spb">SP3</span></a><input type="checkbox" data-step="fastlane" aria-label="Markahang tapos: Fast Lane"></li>
+    <li><a class="step-link" href="#queryapi"><span class="sn">08</span>Query API<span class="spb">SP4</span></a><input type="checkbox" data-step="queryapi" aria-label="Markahang tapos: Query API"></li>
+    <li><a class="step-link" href="#exactlane"><span class="sn">09</span>Exact Lane<span class="spb">SP5</span></a><input type="checkbox" data-step="exactlane" aria-label="Markahang tapos: Exact Lane"></li>
+    <li><a class="step-link" href="#fraud"><span class="sn">10</span>Fraud Scoring<span class="spb">SP6</span></a><input type="checkbox" data-step="fraud" aria-label="Markahang tapos: Fraud Scoring"></li>
+    <li><a class="step-link" href="#e2e"><span class="sn">11</span>End-to-End Run</a><input type="checkbox" data-step="e2e" aria-label="Markahang tapos: End-to-End Run"></li>
+    <li><a class="step-link" href="#retro"><span class="sn">12</span>Retro ng Senior</a><input type="checkbox" data-step="retro" aria-label="Markahang tapos: Retro ng Senior"></li>
+  </ol>
+  <div class="theme-btns" role="group" aria-label="Tema">
+    <button type="button" data-theme-choice="auto">Auto</button>
+    <button type="button" data-theme-choice="light">Maliwanag</button>
+    <button type="button" data-theme-choice="dark">Madilim</button>
+  </div>
+</nav>
+
+<main id="content">
+
+<!-- ================================================================ -->
+<section id="misyon">
+  <div class="step-head"><span class="big-num">00</span><h2>Ang Misyon — intindihin muna bago magtayo</h2></div>
+  <p class="step-goal">Bago tayo pumindot ng keyboard, linawin natin kung ano ba talaga ang problemang sinasagot ng sistemang ito — dahil bawat desisyon sa code ay babalik sa problemang ito.</p>
+
+  <p>Ang problema, sa isang pangungusap: <em>kapag pinindot ng user ang isang ad, sisingilin ang advertiser — kaya ang bawat click ay dapat mabilang nang <strong>eksaktong isang beses</strong>: hindi zero (nawala sa network), hindi dalawa (na-retry at nadoble), at hindi isa kung bot pala ang "user".</em></p>
+
+  <p>Bakit mahirap ito? Dahil ang mga network ay <strong>at-least-once</strong> ang bigay na garantiya: walang mawawala, pero puwedeng dumating nang dalawang beses ang parehong mensahe. Nagta-timeout ang mga request, nagre-retry ang mga client, at may mga bot na nagpapanggap na tao. Ang madali, magbilang; ang mahirap, magbilang <em>nang tama, nang mabilis, at nang mapapanindigan sa invoice</em>.</p>
+
+  <h3>Ang sentral na ideya: dalawang lane, iisang stream</h3>
+  <p>Gusto ng dashboard ng numero <em>sa loob ng ilang segundo</em>, at okey lang na bahagyang mali. Gusto ng invoice ng numerong <em>eksaktong tama</em>, at okey lang maghintay hanggang bukas. Walang iisang sistema na mahusay sa pareho — kaya hindi tayo magpapanggap. Dalawang lane mula sa iisang Kinesis stream:</p>
+
+  <pre class="diagram">
+                          ┌──────────────────────────────────────────────┐
+                FAST LANE │ aggregator: dedup → 1-min windows → bilang   │  ilang segundo,
+                (tantiya) │ (pinapayagang bahagyang mali)                │  para sa dashboard
+                          └───────▲───────────────────────┬──────────────┘
+ pinindot ang ad                  │                       ▼
+      │                           │                ┌────────────┐    ┌───────────┐
+      ▼                           │                │  DynamoDB  │◀───│ query-api │◀── dashboard
+┌────────────────┐       ┌────────┴────────┐       │ aggregates │    └───────────┘
+│ click-redirect │──────▶│ Kinesis stream  │       └────────────┘
+│  302 muna,     │       │  ad-clicks-raw  │
+│  bilang mamaya │       └────────┬────────┘
+└────────────────┘                │
+                          ┌───────▼────────────────────────────────────────┐
+               EXACT LANE │ archiver: BAWAT raw event → S3 bilang Parquet  │  ilang oras,
+               (singilin) │ (kasama ang mga duplicate — sinadya!)          │  pang-invoice
+                          └───────┬────────────────────────────────────────┘
+                                  ▼
+                   reconcile: DuckDB COUNT(DISTINCT cid) sa ibabaw ng S3
+                                  ▼
+                     statements table ──▶ billing-api ──▶ invoice</pre>
+
+  <ul>
+    <li><strong>Fast lane</strong> — nagde-dedup sa pagpasok, nagbibilang sa 1-minutong windows na may watermark, at nagsisilbi ng <em>tantiyang</em> numero na tapat na naka-label na <code>"exact": false</code>.</li>
+    <li><strong>Exact lane</strong> — ina-archive ang <em>lahat</em> ng raw event (kasama ang mga duplicate), tapos muling kino-compute ang billing gamit ang <code>COUNT(DISTINCT cid)</code> sa query time — kaya ligtas i-replay, at laging <code>"exact": true</code>.</li>
+  </ul>
+
+  <div class="why"><span class="label">Ang isang desisyong sandigan ng lahat</span>
+  <p>Ang click id (<code>cid</code>) ay ginagawa sa <strong>client side, bago ang unang hakbang na puwedeng ma-retry</strong>. Kapag nag-retry ang network, <em>parehong</em> <code>cid</code> ang ipapadala ulit — kaya makikilala ng downstream dedup na duplicate ito. Kung ang server ang gagawa ng panibagong id kada attempt, walang katalinuhan sa downstream ang makakapagligtas sa atin: ang retry at ang bagong click ay magiging magkamukha habambuhay.</p></div>
+
+  <h3>Ang anim na sub-project na susundan natin</h3>
+  <p>Ganito mismo pinagbuuan ang sistemang ito — anim na sub-project (SP), bawat isa'y may sariling design spec at plano sa <code>docs/superpowers/</code>. Susundan natin ang parehong pagkakasunod-sunod, dahil bawat isa'y nakapatong sa nauna:</p>
+
+  <div class="tablewrap"><table>
+    <tr><th>SP</th><th>Pangalan</th><th>Ibinibigay nito</th><th>Hakbang</th></tr>
+    <tr><td>1</td><td>Foundations &amp; control plane</td><td>Monorepo, lokal na infra, event contract, Prisma control plane</td><td>02–05</td></tr>
+    <tr><td>2</td><td>Ingestion APIs</td><td>HMAC signature, <code>GET /click</code> redirect, batch ingest</td><td>06</td></tr>
+    <tr><td>3</td><td>Dedup + aggregation</td><td>Exactly-once dedup, windowing, unang Kinesis consumer</td><td>07</td></tr>
+    <tr><td>4</td><td>Real-time query API</td><td>Ang binabasa ng dashboard, may tenant isolation</td><td>08</td></tr>
+    <tr><td>5</td><td>Archive + reconciliation + billing</td><td>S3 Parquet archive, DuckDB reconciliation, statements, billing API</td><td>09</td></tr>
+    <tr><td>6</td><td>Fraud scoring</td><td>Bot/velocity signals, verdicts, exclusion sa billing</td><td>10</td></tr>
+  </table></div>
+
+  <h3>Paano gamitin ang gabay na ito</h3>
+  <ul>
+    <li><strong>Sundan nang sunud-sunod.</strong> Bawat hakbang ay may <em>"Subukan natin"</em> na checkpoint — huwag lumipat hangga't hindi pumapasa ang checkpoint. Sa sidebar, i-check ang kahon kapag tapos ka na sa isang hakbang (naaalala ito ng browser mo).</li>
+    <li><strong>Taglish tayo dito.</strong> Mananatiling Ingles ang mga teknikal na termino (stream, shard, dedup, window) dahil iyon ang bokabularyo ng mga docs at ng code — ang paliwanag ang nasa Tagalog.</li>
+    <li><strong>TDD ang kultura ng repo na ito.</strong> Sa bawat package, isinulat muna ang test bago ang implementasyon. Ipapakita ko ang pattern sa Hakbang 03, at mula roon ay ituturo ko na lang kung ano ang tine-test — nasa repo ang kumpletong 85 tests kung gusto mong tularan isa-isa.</li>
+    <li><strong>Kapag naligaw ka</strong>, ang <a href="guide.html">guide.html</a> ang may kumpletong troubleshooting table, at ang <code>docs/superpowers/specs/</code> ang sasagot sa "bakit ganito ang disenyo?".</li>
+  </ul>
+
+  <div class="note"><span class="label">Tandaan</span>
+  <p>Ang buong sistema ay tumatakbo nang <strong>lokal, walang AWS account, walang gastos</strong> — ginagaya ng LocalStack ang AWS sa laptop mo. Pero ang code ay gumagamit ng <em>totoong</em> AWS SDK: isang environment variable lang (<code>AWS_ENDPOINT_URL</code>) ang pagitan ng laptop mo at ng totoong AWS. Sinadya na <strong>walang kahit isang <code>if (isLocal)</code></strong> sa buong codebase.</p></div>
+
+  <div class="pager"><span></span><a href="#handa">Susunod: 01 · Ihanda ang Makina →</a></div>
+</section>
+
+<!-- ================================================================ -->
+<section id="handa">
+  <div class="step-head"><span class="big-num">01</span><h2>Ihanda ang Makina</h2></div>
+  <p class="step-goal">Tatlong kailangan lang: Node, pnpm, at Docker (sa macOS, sa pamamagitan ng colima). Ayusin natin ito nang maayos ngayon para hindi na tayo maabala habang nagtatayo.</p>
+
+  <div class="tablewrap"><table>
+    <tr><th>Kailangan</th><th>I-check</th><th>I-install (macOS)</th></tr>
+    <tr><td>Node.js ≥ 24</td><td><code>node -v</code></td><td><code>brew install node</code> (o nvm)</td></tr>
+    <tr><td>pnpm ≥ 9</td><td><code>pnpm -v</code></td><td><code>npm install -g pnpm</code></td></tr>
+    <tr><td>Docker CLI + colima</td><td><code>docker ps</code></td><td><code>brew install colima docker docker-compose</code></td></tr>
+  </table></div>
+
+  <p>Sa macOS na walang Docker Desktop, ang <strong>colima</strong> ang nagbibigay ng Linux VM na kailangan ng Docker. Isang beses kada boot:</p>
+  <figure class="code"><figcaption><span>terminal</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>colima start</code></pre></figure>
+
+  <div class="warn"><span class="label">Ingat! Dalawang macOS na patibong (pareho kong naranasan sa proyektong ito)</span>
+  <ul>
+    <li>Kapag sinabi ng <code>docker compose</code> (may espasyo) na "not a docker command", i-link ang plugin: <code>mkdir -p ~/.docker/cli-plugins &amp;&amp; ln -sfn /opt/homebrew/opt/docker-compose/bin/docker-compose ~/.docker/cli-plugins/docker-compose</code></li>
+    <li>Kung may naka-install kang Homebrew Postgres, <strong>tahimik nitong inookupahan ang port 5432</strong> at natatakpan ang Docker Postgres — magmumukhang "auth failure" na nakakalito. Ayusin: <code>brew services stop postgresql@17</code> (o kung anong bersyon ang makita mo sa <code>brew services list</code>).</li>
+  </ul></div>
+
+  <div class="checkpoint"><span class="label">Subukan natin</span>
+  <p>Dapat gumagana ang tatlong ito bago magpatuloy:</p>
+  <figure class="code"><figcaption><span>terminal</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>node -v     <span class="c"># v24.x o mas bago</span>
+pnpm -v     <span class="c"># 9.x o mas bago</span>
+docker ps   <span class="c"># walang error (kahit walang laman ang listahan)</span></code></pre></figure></div>
+
+  <div class="pager"><a href="#misyon">← 00 · Ang Misyon</a><a href="#skeleton">Susunod: 02 · Monorepo Skeleton →</a></div>
+</section>
+
+<!-- ================================================================ -->
+<section id="skeleton">
+  <div class="step-head"><span class="big-num">02</span><h2>Monorepo Skeleton</h2><span class="sp-badge">SP1 · Foundations</span></div>
+  <p class="step-goal">Itatayo natin ang balangkas ng monorepo: tatlong uri ng folder, iisang TypeScript config na minamana ng lahat, at pnpm workspaces na nag-uugnay sa kanila.</p>
+
+  <p>Ang <strong>monorepo</strong> ay isang git repository na naglalaman ng maraming maliliit na package sa halip na isang malaking app. Tatlong folder ang magkakaroon ng kahulugan dito:</p>
+  <ul>
+    <li><code>packages/*</code> — <strong>mga library</strong>: lohikang ini-import ng iba. Hindi sila "tumatakbo".</li>
+    <li><code>services/*</code> — <strong>mga proseso</strong>: HTTP servers at stream consumers. Bawat isa'y may <code>start</code> script.</li>
+    <li><code>infra/*</code> — <strong>mga setup script</strong>: gumagawa ng mga lokal na AWS resource.</li>
+  </ul>
+
+  <p>Gawin ang proyekto at ang tatlong file sa ugat nito:</p>
+  <figure class="code"><figcaption><span>terminal</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>mkdir ad-click-aggregation &amp;&amp; cd ad-click-aggregation
+git init
+mkdir -p packages services infra</code></pre></figure>
+
+  <figure class="code" data-src="package.json"><figcaption><span>package.json</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>{
+  "name": "ad-click-aggregation",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.5.2",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.4",
+    "@types/node": "^24.0.0"
+  }
+}</code></pre></figure>
+
+  <p>Pansinin: ang <code>typescript</code> at <code>vitest</code> ay <em>isang beses lang</em> idinedeklara, dito sa ugat — mamanahin ito ng lahat ng package sa workspace, para hindi tayo mag-a-update ng dalawampung bersyon paglaon.</p>
+
+  <figure class="code" data-src="pnpm-workspace.yaml"><figcaption><span>pnpm-workspace.yaml</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>packages:
+  - "packages/*"
+  - "infra/*"
+  - "services/*"
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': true
+  duckdb: true
+  prisma: true</code></pre></figure>
+
+  <p>Ang <code>allowBuilds</code>: mula pnpm 10, <strong>hindi na basta-basta pinapatakbo</strong> ang mga install script ng mga dependency (isang security measure). Dito natin isinasaad kung alin ang pinagkakatiwalaan — kailangan itong patakbuhin ng Prisma (nagko-compile ng client) at ng DuckDB (may native binary). Idadagdag natin ang mga dependency na iyon sa mga susunod na hakbang, pero ideklara na natin ngayon para hindi tayo magulat.</p>
+
+  <figure class="code" data-src="tsconfig.base.json"><figcaption><span>tsconfig.base.json</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true
+  }
+}</code></pre></figure>
+
+  <p>Bawat package na gagawin natin ay magkakaroon ng sariling maliit na <code>tsconfig.json</code> na nagmamana rito — ito na ang buong laman nito, palagi:</p>
+  <figure class="code"><figcaption><span>packages/&lt;pangalan&gt;/tsconfig.json — ang pattern</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "outDir": "dist", "rootDir": "src" },
+  "include": ["src"]
+}</code></pre></figure>
+
+  <div class="note"><span class="label">Tandaan: ESM at ang <code>dist/</code></span>
+  <p>ESM ang buong repo (<code>"type": "module"</code>). Dalawang kakaibang ugali nito na dapat mong tanggapin nang maaga: (1) ang mga import sa loob ng <code>.ts</code> file ay nagtatapos sa <code>.js</code> — hindi typo, ESM convention iyon, dahil ang tumatakbo talaga ay ang na-compile na <code>dist/*.js</code>; at (2) kapag ang <code>services/query-api</code> ay nag-import ng <code>@app/db</code>, ang binabasa ni Node ay <code>packages/db/dist/index.js</code> — kaya <mark>kung hindi mo pa nabu-build ang isang package, papalpak ang import dito</mark>. Iyan ang dahilan ng <code>pnpm -r build</code> sa mga susunod na checkpoint.</p></div>
+
+  <p>Ang mga package ay tutukoy sa isa't isa gamit ang <code>"@app/db": "workspace:*"</code> sa kanilang <code>package.json</code> — ibig sabihin, "i-link ang lokal na folder, hindi kukuha sa internet".</p>
+
+  <div class="checkpoint"><span class="label">Subukan natin</span>
+  <figure class="code"><figcaption><span>terminal</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>pnpm install
+<span class="c"># Dapat matahimik na matapos. Wala pa tayong package — ang mahalaga,
+# kumikilala na ang pnpm sa workspace at nakalista na ang root devDependencies.</span></code></pre></figure></div>
+
+  <div class="pager"><a href="#handa">← 01 · Ihanda ang Makina</a><a href="#kontrata">Susunod: 03 · Ang Kontrata →</a></div>
+</section>
+
+<!-- ================================================================ -->
+<section id="kontrata">
+  <div class="step-head"><span class="big-num">03</span><h2>Ang Kontrata — <code>event-schema</code> at <code>config</code></h2><span class="sp-badge">SP1 · Foundations</span></div>
+  <p class="step-goal">Ang unang code na isusulat natin ay hindi endpoint kundi <em>kontrata</em>: ang iisang opisyal na hugis ng isang click event, at ang typed na pagbabasa ng environment variables. Maliliit na package, pero sila ang dila na pagsasalitaan ng lahat ng susunod.</p>
+
+  <h3>3.1 · <code>@app/event-schema</code> — ang hugis ng isang click</h3>
+  <p>Kapag ang producer at ang consumer ay may kanya-kanyang ideya kung ano ang laman ng isang event, tahimik silang maghihiwalay ng landas balang araw. Kaya <strong>iisang package</strong> ang magmamay-ari ng hugis, at lahat — ingestion, aggregator, archiver, fraud scorer — ay mag-i-import dito.</p>
+
+  <figure class="code" data-src="packages/event-schema/package.json"><figcaption><span>packages/event-schema/package.json</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>{
+  "name": "@app/event-schema",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  }
+}</code></pre></figure>
+
+  <p>Idagdag din ang pamilyar na <code>tsconfig.json</code> mula sa pattern sa Hakbang 02. Ganito na ang magiging hitsura ng <em>bawat</em> library package — pangalan at dependencies lang ang nagbabago.</p>
+
+  <div class="why"><span class="label">Bakit TDD — at ganito ang ritmo</span>
+  <p>Sa repo na ito, <strong>test muna bago implementasyon</strong>, lagi. Hindi ito seremonya: ang test ang pumipilit sa iyong sabihin nang malinaw kung ano ang "tama" bago ka humarap sa "paano". Isusulat natin nang buo ang unang pares para makita mo ang ritmo; sa mga susunod na hakbang, sasabihin ko na lang kung ano ang tine-test at hahayaan kitang tumingin sa repo para sa kumpleto.</p></div>
+
+  <figure class="code" data-src="packages/event-schema/src/index.test.ts"><figcaption><span>packages/event-schema/src/index.test.ts — isulat MUNA ito</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import { describe, expect, it } from 'vitest';
+import { ClickEventSchema } from './index.js';
+
+const validEvent = {
+  cid: 'clk_9f2k4x',
+  ad_id: 'ad_881203',
+  campaign_id: 'cmp_44210',
+  pub_id: 'pub_6612',
+  ts: '2026-07-12T09:14:32.118Z',
+  sig: 'deadbeef',
+};
+
+describe('ClickEventSchema', () =&gt; {
+  it('accepts a valid click event', () =&gt; {
+    const result = ClickEventSchema.safeParse(validEvent);
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects an event missing ad_id', () =&gt; {
+    const { ad_id, ...withoutAdId } = validEvent;
+    const result = ClickEventSchema.safeParse(withoutAdId);
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a malformed timestamp', () =&gt; {
+    const result = ClickEventSchema.safeParse({ ...validEvent, ts: 'not-a-date' });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects an empty cid', () =&gt; {
+    const result = ClickEventSchema.safeParse({ ...validEvent, cid: '' });
+    expect(result.success).toBe(false);
+  });
+});</code></pre></figure>
+
+  <p>Patakbuhin — <em>dapat pumalpak</em> (wala pa ngang <code>index.ts</code>). Ngayon pa lang natin isusulat ang implementasyon, at pansinin kung gaano kaliit ang kailangan para paluntiin ang test:</p>
+
+  <figure class="code" data-src="packages/event-schema/src/index.ts"><figcaption><span>packages/event-schema/src/index.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import { z } from 'zod';
+
+export const ClickEventSchema = z.object({
+  cid: z.string().min(1),
+  ad_id: z.string().min(1),
+  campaign_id: z.string().min(1),
+  pub_id: z.string().min(1),
+  ts: z.string().datetime(),
+  sig: z.string().min(1),
+});
+
+export type ClickEvent = z.infer&lt;typeof ClickEventSchema&gt;;</code></pre></figure>
+
+  <p>Ang anim na field, at kung bakit sila nariyan:</p>
+  <div class="tablewrap"><table>
+    <tr><th>Field</th><th>Papel</th></tr>
+    <tr><td><code>cid</code></td><td>Click ID — <strong>gawa ng client</strong>, unique kada click. Ito ang dedup key ng buong sistema.</td></tr>
+    <tr><td><code>ad_id</code>, <code>campaign_id</code>, <code>pub_id</code></td><td>Aling ad, aling campaign, at saang publisher nanggaling ang click.</td></tr>
+    <tr><td><code>ts</code></td><td><strong>Event time</strong> — kailan talaga pinindot, hindi kailan natin nakita. Dito nakasalalay ang windowing sa Hakbang 07.</td></tr>
+    <tr><td><code>sig</code></td><td>HMAC signature ng limang field sa itaas — ang "pirma" ng advertiser. Gagawin natin sa Hakbang 06.</td></tr>
+  </table></div>
+
+  <div class="note"><span class="label">Tandaan: bakit walang <code>r</code> dito</span>
+  <p>Sa Hakbang 06, ang redirect URL ay may dagdag na <code>r</code> (ang landing page). Sinadyang <strong>wala ito sa schema</strong>: ang <code>r</code> ay pag-aari ng redirect <em>request</em>, hindi ng permanenteng click <em>event</em> na dadaloy sa Kinesis. Ang schema ay para sa record na itatago natin, hindi sa lahat ng nadadampot sa HTTP.</p></div>
+
+  <h3>3.2 · <code>@app/config</code> — typed na environment</h3>
+  <p>Parehong gawi: package na may <code>zod</code> dependency, test muna (mga kaso: kumpletong env pumapasa; kulang na <code>DATABASE_URL</code> sumasabog; may default ang <code>AWS_REGION</code>), tapos ito ang buong implementasyon:</p>
+
+  <figure class="code" data-src="packages/config/src/index.ts"><figcaption><span>packages/config/src/index.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import { z } from 'zod';
+
+const EnvSchema = z.object({
+  AWS_REGION: z.string().min(1).default('us-east-1'),
+  AWS_ENDPOINT_URL: z.string().url().optional(),
+  DATABASE_URL: z.string().min(1),
+  REDIS_URL: z.string().min(1),
+});
+
+export type Env = z.infer&lt;typeof EnvSchema&gt;;
+
+export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
+  const result = EnvSchema.safeParse(source);
+  if (!result.success) {
+    throw new Error(`Invalid environment configuration: ${result.error.message}`);
+  }
+  return result.data;
+}</code></pre></figure>
+
+  <div class="why"><span class="label">Bakit sumasabog agad, at bakit apat lang ang laman</span>
+  <p>Ang maling config ay dapat pumatay ng proseso <strong>sa startup</strong>, hindi manggulat sa alas-tres ng madaling-araw. Kaya <code>throw</code> agad. At pansinin kung ano ang <em>wala</em> rito: ang <code>KINESIS_SHARD_ID</code>, <code>OPS_TOKEN</code>, at <code>PORT</code> ay babasahin ng kanya-kanyang serbisyo nang direkta paglaon — kung isisilid natin sila sa shared schema, mapipilitan ang <em>bawat</em> serbisyo na magrequire ng variable na hinding-hindi nito gagamitin.</p></div>
+
+  <div class="checkpoint"><span class="label">Subukan natin</span>
+  <figure class="code"><figcaption><span>terminal</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>pnpm install                                <span class="c"># i-link ang mga bagong package</span>
+pnpm --filter @app/event-schema test        <span class="c"># 4 na test, luntian</span>
+pnpm --filter @app/config test              <span class="c"># luntian din</span>
+pnpm -r build                               <span class="c"># lumilitaw ang dist/ sa bawat package</span></code></pre></figure></div>
+
+  <div class="pager"><a href="#skeleton">← 02 · Monorepo Skeleton</a><a href="#imprastraktura">Susunod: 04 · Lokal na AWS →</a></div>
+</section>
+
+<!-- ================================================================ -->
+<section id="imprastraktura">
+  <div class="step-head"><span class="big-num">04</span><h2>Lokal na AWS — Docker, LocalStack, at ang Kinesis stream</h2><span class="sp-badge">SP1 · Foundations</span></div>
+  <p class="step-goal">Itatayo natin ang tatlong container na sasandalan ng lahat — LocalStack (pekeng AWS), Postgres, at Redis — at isusulat ang unang infra script: ang paglikha ng <code>ad-clicks-raw</code> na Kinesis stream.</p>
+
+  <p>Ang <strong>LocalStack</strong> ay isang container na ginagaya ang mga AWS API sa <code>http://localhost:4566</code>. Ang code natin ay gagamit ng <em>totoong</em> AWS SDK; ang tanging pinagkaiba ay ang <code>AWS_ENDPOINT_URL</code> na nakaturo sa LocalStack. Tanggalin ang variable na iyon (at maglagay ng totoong credentials) at ang <em>parehong</em> code ay kakausap na sa totoong AWS.</p>
+
+  <figure class="code" data-src="docker-compose.yml"><figcaption><span>docker-compose.yml</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>services:
+  localstack:
+    image: localstack/localstack:3.8
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=kinesis,dynamodb,s3,firehose
+      - DEBUG=0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=app
+      - POSTGRES_PASSWORD=app
+      - POSTGRES_DB=app
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10</code></pre></figure>
+
+  <figure class="code" data-src=".env.example"><figcaption><span>.env.example</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>DATABASE_URL=postgresql://app:app@localhost:5432/app
+REDIS_URL=redis://localhost:6379
+AWS_REGION=us-east-1
+AWS_ENDPOINT_URL=http://localhost:4566</code></pre></figure>
+
+  <p>Kopyahin ito bilang <code>.env</code> (huwag i-commit ang <code>.env</code>). Kapag kailangan ng isang terminal ang mga variable na ito, ganito ang pagkarga — gagamitin natin ito nang madalas simula Hakbang 11:</p>
+  <figure class="code"><figcaption><span>terminal</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>cp .env.example .env
+set -a; source .env; set +a</code></pre></figure>
+
+  <h3>4.1 · <code>infra/localstack</code> — ang unang bootstrap script</h3>
+  <p>Kailangan ng Kinesis stream bago tayo makapag-publish ng kahit ano. Gumawa ng package sa <code>infra/localstack</code>:</p>
+
+  <figure class="code"><figcaption><span>infra/localstack/package.json — sa puntong ito</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>{
+  "name": "@app/infra-localstack",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bootstrap": "tsx src/bootstrap.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-kinesis": "^3.716.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}</code></pre></figure>
+
+  <p>(Madaragdagan pa ito ng <code>@aws-sdk/client-dynamodb</code> at <code>@aws-sdk/client-s3</code> sa Hakbang 07 at 09.) Ang puso ng script — <strong>idempotent</strong> na paglikha ng stream:</p>
+
+  <figure class="code"><figcaption><span>infra/localstack/src/bootstrap.ts — ang bahaging Kinesis</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import {
+  KinesisClient,
+  CreateStreamCommand,
+  DescribeStreamSummaryCommand,
+  ResourceInUseException,
+  ResourceNotFoundException,
+  waitUntilStreamExists,
+} from '@aws-sdk/client-kinesis';
+
+const STREAM_NAME = 'ad-clicks-raw';
+const SHARD_COUNT = 2;
+
+export async function ensureClickStream(client: KinesisClient): Promise&lt;void&gt; {
+  if (!(await streamExists(client))) {
+    try {
+      await client.send(new CreateStreamCommand({ StreamName: STREAM_NAME, ShardCount: SHARD_COUNT }));
+    } catch (err) {
+      if (!(err instanceof ResourceInUseException)) throw err;
+    }
+  }
+
+  await waitUntilStreamExists({ client, maxWaitTime: 30, minDelay: 1 }, { StreamName: STREAM_NAME });
+}
+
+async function streamExists(client: KinesisClient): Promise&lt;boolean&gt; {
+  try {
+    await client.send(new DescribeStreamSummaryCommand({ StreamName: STREAM_NAME }));
+    return true;
+  } catch (err) {
+    if (err instanceof ResourceNotFoundException) return false;
+    throw err;
+  }
+}</code></pre></figure>
+
+  <p>Ang <code>main()</code> sa dulo ng file ay gumagawa ng <code>KinesisClient</code> na nakaturo sa LocalStack (endpoint mula sa <code>AWS_ENDPOINT_URL</code>, dummy credentials na <code>test</code>/<code>test</code>) at tumatawag sa <code>ensureClickStream</code>. Lalago ang <code>main()</code> na ito sa bawat sub-project — makikita mo ang buong pinal na bersyon sa Hakbang 10.</p>
+
+  <div class="why"><span class="label">Tatlong desisyon sa maliit na script na ito</span>
+  <ul>
+    <li><strong>Idempotent.</strong> Ligtas patakbuhin nang paulit-ulit — "tiyaking mayroon", hindi "gumawa". Lahat ng bootstrap at seed sa repo na ito ay ganito, para ang "sira na, ulitin natin" ay laging ligtas na sagot.</li>
+    <li><strong>Naghihintay hanggang ACTIVE.</strong> Ang <code>CreateStream</code> ay asynchronous sa AWS — kapag hindi ka naghintay, papalpak nang paminsan-minsan ang unang <code>PutRecord</code>. Ang <code>minDelay: 1</code> ay aral mula sa totoong pagpapatakbo: sa default na delay, muntik nang lumampas sa test timeout ang malamig na paglikha.</li>
+    <li><strong>Dalawang shard lang nang lokal.</strong> Ang disenyo sa papel ay 20 shards para sa 12,000 clicks/segundo na burst; ang laptop mo ay hindi makakakita ng ganoong trapiko. Dalawa ang pinakamaliit na bilang na nagpapakita pa rin ng "maraming consumer, kanya-kanyang shard" na modelo.</li>
+  </ul></div>
+
+  <div class="checkpoint"><span class="label">Subukan natin</span>
+  <figure class="code"><figcaption><span>terminal</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>docker compose up -d
+docker compose ps                <span class="c"># ulitin hanggang "healthy" lahat ng tatlo (~30s)</span>
+pnpm install
+pnpm --filter @app/infra-localstack bootstrap
+docker compose exec localstack awslocal kinesis list-streams
+<span class="c"># → { "StreamNames": [ "ad-clicks-raw" ], ... }</span></code></pre></figure></div>
+
+  <div class="pager"><a href="#kontrata">← 03 · Ang Kontrata</a><a href="#controlplane">Susunod: 05 · Control Plane →</a></div>
+</section>
+
+<!-- ================================================================ -->
+<section id="controlplane">
+  <div class="step-head"><span class="big-num">05</span><h2>Control Plane — Prisma, migration, at seed</h2><span class="sp-badge">SP1 · Foundations</span></div>
+  <p class="step-goal">Ang mga advertiser, campaign, ad, at API key ay <em>control plane</em>: mabagal magbago, ugnay-ugnay, at kailangang ma-query nang relational. Postgres + Prisma ang tamang kasangkapan dito — at dito <em>lamang</em>. Ang mga click mismo (ang data plane) ay hinding-hindi dadaan sa Postgres.</p>
+
+  <figure class="code" data-src="packages/db/package.json"><figcaption><span>packages/db/package.json</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>{
+  "name": "@app/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "migrate": "prisma migrate dev",
+    "generate": "prisma generate",
+    "postinstall": "prisma generate",
+    "seed": "tsx src/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.1.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.1.0",
+    "tsx": "^4.19.2"
+  }
+}</code></pre></figure>
+
+  <div class="note"><span class="label">Tandaan: ang <code>postinstall</code> na iyan ay hindi palamuti</span>
+  <p>Ang Prisma client ay <em>ginegenerate</em> mula sa schema. Sa pamamagitan ng <code>"postinstall": "prisma generate"</code>, kusang handa na ang client pagkatapos ng bawat <code>pnpm install</code> — walang lihim na dagdag na hakbang, at hindi kailangan ng koneksyon sa database para dito. (Ito rin ang dahilan kaya nasa <code>allowBuilds</code> natin ang Prisma mula pa Hakbang 02.)</p></div>
+
+  <figure class="code" data-src="packages/db/prisma/schema.prisma"><figcaption><span>packages/db/prisma/schema.prisma</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Advertiser {
+  id            String     @id @default(cuid())
+  name          String
+  signingSecret String
+  apiKeys       ApiKey[]
+  campaigns     Campaign[]
+  createdAt     DateTime   @default(now())
+}
+
+model ApiKey {
+  id           String     @id @default(cuid())
+  advertiserId String
+  advertiser   Advertiser @relation(fields: [advertiserId], references: [id])
+  hashedKey    String     @unique
+  createdAt    DateTime   @default(now())
+  revokedAt    DateTime?
+}
+
+model Publisher {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+}
+
+model Campaign {
+  id           String         @id @default(cuid())
+  advertiserId String
+  advertiser   Advertiser     @relation(fields: [advertiserId], references: [id])
+  name         String
+  status       CampaignStatus @default(ACTIVE)
+  ads          Ad[]
+  createdAt    DateTime       @default(now())
+}
+
+enum CampaignStatus {
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+model Ad {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+  name       String
+  landingUrl String
+  createdAt  DateTime @default(now())
+}</code></pre></figure>
+
+  <div class="why"><span class="label">Tatlong desisyon sa schema na ito</span>
+  <ul>
+    <li><strong>Ang <code>signingSecret</code> ay nasa <code>Advertiser</code></strong>, hindi kada campaign o kada ad. Ang tenant boundary ng buong sistema ay ang advertiser ("hindi mababasa ng isang advertiser ang data ng iba") — kaya isang secret kada advertiser: parehong identifier ang ginagamit sa rotation at sa lookup.</li>
+    <li><strong>Ang <code>ApiKey.hashedKey</code> ay sha256 lamang.</strong> Ang hilaw na key ay ipapakita nang isang beses sa paglikha at hinding-hindi itatago — kung matapon man ang database, walang mananakaw na kredensyal.</li>
+    <li><strong>Walang foreign key ang <code>Publisher</code> papunta sa <code>Ad</code>.</strong> Ang <code>pub_id</code> ay naglalarawan kung <em>saan nanggaling</em> ang click, hindi kung <em>ano ang pinindot</em> — magkaibang dimensyon, kaya walang pilit na kadena.</li>
+  </ul></div>
+
+  <p>Gumawa ng migration laban sa Docker Postgres (nakabukas dapat ang mga container mula Hakbang 04):</p>
+  <figure class="code"><figcaption><span>terminal</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>DATABASE_URL=postgresql://app:app@localhost:5432/app \
+  pnpm --filter @app/db exec prisma migrate dev --name init</code></pre></figure>
+
+  <div class="warn"><span class="label">Ingat! Bakit laging naka-prefix ang <code>DATABASE_URL</code></span>
+  <p>Ang Prisma <em>CLI</em> ay kusang nagbabasa ng <code>.env</code>, pero ang Prisma <em>client library</em> (ang tumatakbo sa runtime at sa mga test) ay nagbabasa lamang ng tunay na process environment. Ang pag-prefix ng variable sa utos ang pinakasimpleng paraang maaasahan. Kapag nagsawa ka: <code>set -a; source .env; set +a</code> nang isang beses kada terminal, tapos puwede mo nang alisin ang mga prefix sa session na iyon.</p></div>
+
+  <h3>5.1 · Ang client, ang directory query, at ang barrel</h3>
+  <p>Tatlong maliit na file. Ang <code>client.ts</code> ay iisang shared na instance ng <code>PrismaClient</code>; ang <code>directory.ts</code> ang query na magpapakain sa cache ng Hakbang 06:</p>
+
+  <figure class="code" data-src="packages/db/src/directory.ts"><figcaption><span>packages/db/src/directory.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import type { PrismaClient } from '@prisma/client';
+
+export interface AdDirectoryEntry {
+  adId: string;
+  campaignId: string;
+  advertiserId: string;
+  signingSecret: string;
+  landingUrl: string;
+}
+
+export async function listActiveAdDirectory(client: PrismaClient): Promise&lt;AdDirectoryEntry[]&gt; {
+  const ads = await client.ad.findMany({
+    where: { campaign: { status: 'ACTIVE' } },
+    select: {
+      id: true,
+      campaignId: true,
+      landingUrl: true,
+      campaign: { select: { advertiserId: true, advertiser: { select: { signingSecret: true } } } },
+    },
+  });
+
+  return ads.map((ad) =&gt; ({
+    adId: ad.id,
+    campaignId: ad.campaignId,
+    advertiserId: ad.campaign.advertiserId,
+    signingSecret: ad.campaign.advertiser.signingSecret,
+    landingUrl: ad.landingUrl,
+  }));
+}</code></pre></figure>
+
+  <div class="why"><span class="label">Bakit "flattened directory" at hindi lookup kada request</span>
+  <p>Ang redirect sa Hakbang 06 ay may p99 na budget na <strong>&lt;100ms sa ilalim ng 12,000 clicks/segundo</strong>. Isang Postgres round-trip kada click para hanapin ang signing secret? Delikado sa budget na iyon. Kaya ang kontrata ay: <em>isang</em> query na nagbabalik ng buong directory (flat na — walang joins pagdating sa gumagamit), at isang in-memory cache na magre-refresh kada 30 segundo. Pansinin ding kasama ang <code>landingUrl</code> — may malaking papel iyan sa seguridad mamaya.</p></div>
+
+  <figure class="code"><figcaption><span>packages/db/src/client.ts + src/index.ts — sa puntong ito</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code><span class="c">// client.ts</span>
+import { PrismaClient } from '@prisma/client';
+
+export const prisma = new PrismaClient();
+
+<span class="c">// index.ts — ang barrel; madaragdagan ito sa Hakbang 08 at 09</span>
+export { prisma } from './client.js';
+export { listActiveAdDirectory } from './directory.js';
+export type { AdDirectoryEntry } from './directory.js';
+export { runSeed } from './seed.js';
+export type { SeedResult } from './seed.js';
+export { PrismaClient } from '@prisma/client';</code></pre></figure>
+
+  <h3>5.2 · Ang idempotent na seed</h3>
+  <p>Walang admin UI ang proyektong ito (sinadya — walang nangangailangan nito kundi tao na nagpapatakbo ng script), kaya isang seed script ang maglalagay ng demo data. Ang mahalagang katangian: <strong>upsert lahat</strong>, para ang muling pagpapatakbo ay hindi nagpaparami ng data.</p>
+
+  <figure class="code" data-src="packages/db/src/seed.ts"><figcaption><span>packages/db/src/seed.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import { PrismaClient } from '@prisma/client';
+import { createHash, randomBytes } from 'node:crypto';
+
+export interface SeedResult {
+  advertiserId: string;
+  campaignId: string;
+  adId: string;
+  publisherId: string;
+  rawApiKey: string;
+}
+
+export async function runSeed(prisma: PrismaClient): Promise&lt;SeedResult&gt; {
+  const advertiser = await prisma.advertiser.upsert({
+    where: { id: 'seed-advertiser-1' },
+    update: {},
+    create: { id: 'seed-advertiser-1', name: 'Acme Ads', signingSecret: 'seed-signing-secret' },
+  });
+
+  const rawApiKey = randomBytes(24).toString('hex');
+  const hashedKey = createHash('sha256').update(rawApiKey).digest('hex');
+  await prisma.apiKey.upsert({
+    where: { id: 'seed-api-key-1' },
+    update: { hashedKey },
+    create: {
+      id: 'seed-api-key-1',
+      advertiserId: advertiser.id,
+      hashedKey,
+    },
+  });
+
+  const campaign = await prisma.campaign.upsert({
+    where: { id: 'seed-campaign-1' },
+    update: {},
+    create: { id: 'seed-campaign-1', advertiserId: advertiser.id, name: 'Summer Launch', status: 'ACTIVE' },
+  });
+
+  const ad = await prisma.ad.upsert({
+    where: { id: 'seed-ad-1' },
+    update: {},
+    create: {
+      id: 'seed-ad-1',
+      campaignId: campaign.id,
+      name: 'Banner A',
+      landingUrl: 'https://advertiser.example.com/landing',
+    },
+  });
+
+  const publisher = await prisma.publisher.upsert({
+    where: { id: 'seed-publisher-1' },
+    update: {},
+    create: { id: 'seed-publisher-1', name: 'Example Publisher Network' },
+  });
+
+  return {
+    advertiserId: advertiser.id,
+    campaignId: campaign.id,
+    adId: ad.id,
+    publisherId: publisher.id,
+    rawApiKey,
+  };
+}
+
+async function main() {
+  const prisma = new PrismaClient();
+  const result = await runSeed(prisma);
+  console.log('Seed complete. Demo API key (save this, it is not stored raw):', result.rawApiKey);
+  await prisma.$disconnect();
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((err) =&gt; {
+    console.error(err);
+    process.exit(1);
+  });
+}</code></pre></figure>
+
+  <p>Isang detalye na madaling makaligtaan: sa <code>apiKey.upsert</code>, ang <code>update: { hashedKey }</code> ay <em>hindi</em> blangko — bawat muling patakbo ng seed ay gumagawa ng <strong>panibagong</strong> API key at pinapalitan ang hash. Kung blangko iyon, ang ipi-print na bagong key ay hindi tutugma sa lumang hash sa database, at malulungkot ka sa Hakbang 08.</p>
+
+  <div class="checkpoint"><span class="label">Subukan natin</span>
+  <figure class="code"><figcaption><span>terminal</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>DATABASE_URL=postgresql://app:app@localhost:5432/app \
+  pnpm --filter @app/db seed
+<span class="c"># → "Seed complete. Demo API key (save this, it is not stored raw): 3f9c…"
+#   ITAGO ANG KEY NA IYAN — iyan ang Bearer token mo sa Hakbang 08 at 09.</span>
+
+DATABASE_URL=postgresql://app:app@localhost:5432/app \
+  pnpm --filter @app/db test
+<span class="c"># Integration tests laban sa TOTOONG lokal na Postgres — kaya kailangang
+# nakabukas ang mga container.</span></code></pre></figure></div>
+
+  <p>Tapos na ang SP1: may monorepo tayo, may kontrata, may lokal na AWS, at may control plane. Ngayon na natin bubuksan ang pinto ng mga click.</p>
+
+  <div class="pager"><a href="#imprastraktura">← 04 · Lokal na AWS</a><a href="#ingestion">Susunod: 06 · Ingestion APIs →</a></div>
+</section>
+
+<!-- ================================================================ -->
+<section id="ingestion">
+  <div class="step-head"><span class="big-num">06</span><h2>Ingestion — ang mga pinto ng click</h2><span class="sp-badge">SP2 · Ingestion APIs</span></div>
+  <p class="step-goal">Dalawang pinto ang papasukan ng bawat click: ang <code>GET /click</code> redirect (ang hot path — may taong naghihintay) at ang <code>POST /v1/events/clicks</code> batch upload (para sa mga mobile SDK na nag-ipon nang offline). Pareho silang magtatapos sa iisang validated na event sa <code>ad-clicks-raw</code>.</p>
+
+  <p>Ang pagkakasunod-sunod ng pagbuo (tatlong library muna, bago ang dalawang serbisyo): <code>click-signature</code> → <code>directory-cache</code> → <code>kinesis-publisher</code> → <code>click-redirect</code> → <code>batch-ingest</code>.</p>
+
+  <h3>6.1 · <code>@app/click-signature</code> — ang pirma ng advertiser</h3>
+  <p>Paano natin malalaman na ang isang click URL ay galing talaga sa ad server at hindi gawa-gawa? <strong>HMAC signature.</strong> Sa render time, pipirmahan ng ad server ang mga field ng click gamit ang lihim ng advertiser; sa ingestion, beberipikahin natin. Ang hindi makapagbigay ng tamang <code>sig</code> ay hindi papasok.</p>
+
+  <figure class="code" data-src="packages/click-signature/src/index.ts"><figcaption><span>packages/click-signature/src/index.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import { createHmac, timingSafeEqual } from 'node:crypto';
+
+export interface SignableFields {
+  cid: string;
+  ad_id: string;
+  campaign_id: string;
+  pub_id: string;
+  ts: string;
+}
+
+function canonicalize(fields: SignableFields): string {
+  return [fields.cid, fields.ad_id, fields.campaign_id, fields.pub_id, fields.ts].join('|');
+}
+
+export function computeSignature(secret: string, fields: SignableFields): string {
+  return createHmac('sha256', secret).update(canonicalize(fields)).digest('hex');
+}
+
+export function verifySignature(secret: string, fields: SignableFields, sig: string): boolean {
+  const expected = Buffer.from(computeSignature(secret, fields), 'hex');
+  const actual = Buffer.from(sig, 'hex');
+  if (expected.length !== actual.length) return false;
+  return timingSafeEqual(expected, actual);
+}</code></pre></figure>
+
+  <div class="why"><span class="label">Bakit ganito ang beripikasyon</span>
+  <ul>
+    <li><strong><code>timingSafeEqual</code>, hindi <code>===</code>.</strong> Ang ordinaryong string compare ay humihinto sa unang maling byte — mula sa bilis ng sagot, kayang hulaan ng attacker ang signature nang paisa-isang byte. Ang constant-time compare ang pumipigil doon.</li>
+    <li><strong>Ang length check bago ang compare ay hindi opsyonal:</strong> ang <code>timingSafeEqual</code> ay <em>sumasabog</em> kapag magkaiba ang haba, kaya kailangang harangin muna nang maayos.</li>
+    <li><strong>Iisang <code>canonicalize</code>.</strong> Ang pagdidikit ng mga field gamit ang <code>|</code> ay kailangang <em>eksaktong</em> pareho sa pumipirma at sa bumeberipika — kaya iisang function, iisang package, walang kopya kung saan-saan.</li>
+    <li>Lowercase hex ang output — ligtas ilagay sa query string nang walang escaping.</li>
+  </ul></div>
+
+  <p>Mga test (nasa <code>src/index.test.ts</code>): pumapasa ang pirmang parehong secret; bumabagsak kapag binago ang kahit isang field; bumabagsak sa ibang secret; at bumabagsak nang <em>hindi sumasabog</em> sa basurang signature na maling haba.</p>
+
+  <h3>6.2 · <code>@app/directory-cache</code> — walang DB sa hot path</h3>
+  <p>Ang redirect ay hindi puwedeng tumawag sa Postgres kada click. Kaya: isang in-memory na <code>Map</code> mula sa <code>listActiveAdDirectory</code> ng Hakbang 05, nire-refresh kada 30 segundo sa background.</p>
+
+  <figure class="code" data-src="packages/directory-cache/src/index.ts"><figcaption><span>packages/directory-cache/src/index.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import type { AdDirectoryEntry } from '@app/db';
+
+export interface DirectoryCache {
+  lookup(adId: string): AdDirectoryEntry | undefined;
+  start(): Promise&lt;void&gt;;
+  stop(): void;
+}
+
+export function createDirectoryCache(
+  loadDirectory: () =&gt; Promise&lt;AdDirectoryEntry[]&gt;,
+  options: { refreshIntervalMs?: number } = {}
+): DirectoryCache {
+  const refreshIntervalMs = options.refreshIntervalMs ?? 30_000;
+  let entries = new Map&lt;string, AdDirectoryEntry&gt;();
+  let timer: NodeJS.Timeout | undefined;
+
+  async function refresh(): Promise&lt;void&gt; {
+    const rows = await loadDirectory();
+    entries = new Map(rows.map((row) =&gt; [row.adId, row]));
+  }
+
+  return {
+    lookup(adId) {
+      return entries.get(adId);
+    },
+    async start() {
+      await refresh();
+      timer = setInterval(() =&gt; {
+        refresh().catch((err) =&gt; console.error('directory cache refresh failed', err));
+      }, refreshIntervalMs);
+      timer.unref();
+    },
+    stop() {
+      clearInterval(timer);
+    },
+  };
+}</code></pre></figure>
+
+  <p>Tatlong detalyeng sulit pansinin: (1) ang <code>loadDirectory</code> ay <em>ipinapasa</em> bilang parameter, hindi ini-import — kaya nate-test ang cache gamit ang pekeng loader, zero database; (2) ang <code>lookup</code> ay synchronous at puro memorya — ito mismo ang nag-aalis ng DB round-trip sa hot path; (3) ang <code>timer.unref()</code> ay nagsasabing "huwag mo akong hintayin" — hindi mabibitin ang proseso dahil sa refresh timer.</p>
+
+  <h3>6.3 · <code>@app/kinesis-publisher</code> — isang lugar lang ng salting</h3>
+  <p>Ganito ang publisher <em>sa puntong ito</em> (may idadagdag tayong maliit sa Hakbang 10):</p>
+
+  <figure class="code"><figcaption><span>packages/kinesis-publisher/src/index.ts — bersyong SP2</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import { KinesisClient, PutRecordCommand } from '@aws-sdk/client-kinesis';
+import type { ClickEvent } from '@app/event-schema';
+
+export const CLICK_STREAM_NAME = 'ad-clicks-raw';
+
+export async function publishClickEvent(
+  client: KinesisClient,
+  streamName: string,
+  event: ClickEvent
+): Promise&lt;void&gt; {
+  await client.send(new PutRecordCommand({
+    StreamName: streamName,
+    PartitionKey: `${event.ad_id}#${Math.floor(Math.random() * 8)}`,
+    Data: Buffer.from(JSON.stringify({ ...event, receivedAt: Date.now() })),
+  }));
+}</code></pre></figure>
+
+  <div class="why"><span class="label">Bakit may <code>#0-7</code> sa partition key</span>
+  <p>Ang partition key ang nagpapasya kung aling shard ang pupuntahan ng record. Kung <code>ad_id</code> lang ito, ang isang viral na ad ay dadagsa <em>lahat</em> sa iisang shard — ang klasikong <strong>hot shard</strong> na problema. Ang random na salt na 0–7 ay nagkakalat ng isang ad sa hanggang 8 shards. Ang lohikang ito ay nakatira sa <strong>iisang package</strong> na ginagamit ng dalawang pinto — kaya magkapareho sila <em>dahil sa konstruksyon</em>, hindi dahil sa paalala sa dokumentasyon. Idinadagdag din dito ang <code>receivedAt</code> (kailan natin nakita) sa tabi ng <code>ts</code> (kailan talaga pinindot) — ang agwat ng dalawa ang "lateness" na haharapin natin sa Hakbang 07.</p></div>
+
+  <h3>6.4 · <code>services/click-redirect</code> — ang hot path</h3>
+  <p>Ito ang tanging code sa buong sistema na hinihintay ng tao. Ang mga serbisyo sa repo na ito ay laging nahahati sa dalawa: isang purong <code>buildApp(deps)</code> na tumatanggap ng mga collaborator bilang argumento (kaya nate-test nang may mga fake, walang totoong network o database), at isang manipis na <code>server.ts</code> na nagkakabit ng mga totoong client (sinadyang walang test). Ganito ang <code>app.ts</code> sa puntong ito:</p>
+
+  <figure class="code"><figcaption><span>services/click-redirect/src/app.ts — bersyong SP2</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import Fastify, { type FastifyInstance } from 'fastify';
+import { ClickEventSchema, type ClickEvent } from '@app/event-schema';
+import { verifySignature } from '@app/click-signature';
+import type { AdDirectoryEntry } from '@app/db';
+
+export interface ClickRedirectDeps {
+  directoryCache: { lookup(adId: string): AdDirectoryEntry | undefined };
+  publish: (event: ClickEvent) =&gt; Promise&lt;void&gt;;
+}
+
+export function buildApp(deps: ClickRedirectDeps): FastifyInstance {
+  const app = Fastify({ logger: true });
+
+  app.get('/click', async (req, reply) =&gt; {
+    const query = req.query as Record&lt;string, unknown&gt;;
+    const parsed = ClickEventSchema.safeParse(query);
+    const rawR = typeof query.r === 'string' ? query.r : undefined;
+
+    if (!parsed.success || !rawR) {
+      return reply.code(400).send({ error: 'invalid_request' });
+    }
+
+    const event = parsed.data;
+    const entry = deps.directoryCache.lookup(event.ad_id);
+    if (!entry) {
+      req.log.warn({ adId: event.ad_id }, 'unknown ad_id');
+      return reply.code(400).send({ error: 'invalid_request' });
+    }
+
+    if (!verifySignature(entry.signingSecret, event, event.sig)) {
+      req.log.warn({ cid: event.cid }, 'signature verification failed');
+      return reply.code(400).send({ error: 'invalid_request' });
+    }
+
+    let decodedR: string;
+    try {
+      decodedR = decodeURIComponent(rawR);
+    } catch {
+      return reply.code(400).send({ error: 'invalid_request' });
+    }
+
+    if (decodedR !== entry.landingUrl) {
+      req.log.warn({ cid: event.cid }, 'landing url mismatch');
+      return reply.code(400).send({ error: 'invalid_request' });
+    }
+
+    reply.redirect(entry.landingUrl, 302);
+
+    setImmediate(() =&gt; {
+      deps.publish(event).catch((err) =&gt; req.log.error({ err, cid: event.cid }, 'click enqueue failed'));
+    });
+  });
+
+  return app;
+}</code></pre></figure>
+
+  <p>Ang pagkakasunod-sunod dito ay <strong>sagrado</strong>:</p>
+  <ol>
+    <li><strong>I-validate ang hugis</strong> (Zod) — basura, labas agad.</li>
+    <li><strong>Hanapin ang ad sa cache</strong> — hindi sa database. Walang alam na ad? Labas.</li>
+    <li><strong>Beripikahin ang <code>sig</code></strong> — huwad na pirma? Labas.</li>
+    <li><strong>Suriin ang <code>r</code> laban sa nakatagong <code>landingUrl</code></strong> — <em>ito ang pinakamahalagang linya ng seguridad sa file na ito</em>, tingnan ang kahon sa ibaba.</li>
+    <li><strong>Ipadala ang <code>302</code>.</strong> Aalis na ang browser ng user.</li>
+    <li><strong>Saka pa lang mag-publish</strong>, sa loob ng <code>setImmediate</code> — fire-and-forget, para ang mabagal o sirang Kinesis ay hinding-hindi makapagpaantala sa tao.</li>
+  </ol>
+
+  <div class="warn"><span class="label">Ingat! Ang open-redirect na nakatago sa disenyo</span>
+  <p>Ang <code>sig</code> ay pumipirma lamang sa mga field ng click — <strong>hindi kasama ang <code>r</code></strong>. Ibig sabihin, puwedeng kunin ng kahit sino ang isang tunay at may-pirmang click URL at palitan ang <code>r</code> ng <em>kahit anong site</em> — at magre-redirect tayo roon, suot-suot ang ating domain. Iyan ang <strong>open redirect</strong>, paboritong sangkap ng phishing. Ang lunas: ang <code>r</code> ay dapat <em>eksaktong tumugma</em> sa <code>landingUrl</code> na nakatago sa Postgres para sa ad na iyon — kaya natin ito isinama sa directory contract noong Hakbang 05. Isa itong butas sa orihinal na disenyo sa papel na sinara ng implementasyon sa halip na kopyahin.</p></div>
+
+  <div class="why"><span class="label">Bakit iisa ang <code>400</code> sa lahat ng dahilan ng pagtanggi</span>
+  <p>Apat na magkaibang kabiguan, iisang sagot: <code>400 {"error":"invalid_request"}</code>. Kung iba-iba ang mensahe, matutuklasan ng attacker kung aling <code>ad_id</code> ang totoo sa pamamagitan lang ng paghahambing ng mga sagot ("unknown ad" vs "bad signature" — a, totoo pala ang ad na ito!). Ang tunay na dahilan ay naka-log sa server, hindi kailanman ibinabalik sa tumatawag. Makikita mo muli ang pattern na ito sa Hakbang 08 at 09 bilang magkaparehong <code>404</code>.</p></div>
+
+  <p>Ang <code>server.ts</code> — ang manipis na taga-kabit (port 3000):</p>
+  <figure class="code"><figcaption><span>services/click-redirect/src/server.ts — bersyong SP2</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import { KinesisClient } from '@aws-sdk/client-kinesis';
+import { prisma, listActiveAdDirectory } from '@app/db';
+import { createDirectoryCache } from '@app/directory-cache';
+import { publishClickEvent, CLICK_STREAM_NAME } from '@app/kinesis-publisher';
+import { loadEnv } from '@app/config';
+import { buildApp } from './app.js';
+
+const env = loadEnv();
+const kinesis = new KinesisClient({
+  region: env.AWS_REGION,
+  endpoint: env.AWS_ENDPOINT_URL,
+  // ponytail: LocalStack dummy creds; swap for the default AWS credential provider chain when targeting real AWS
+  credentials: { accessKeyId: 'test', secretAccessKey: 'test' },
+});
+
+const directoryCache = createDirectoryCache(() =&gt; listActiveAdDirectory(prisma));
+await directoryCache.start();
+
+const app = buildApp({
+  directoryCache,
+  publish: (event) =&gt; publishClickEvent(kinesis, CLICK_STREAM_NAME, event),
+});
+
+await app.listen({ port: Number(process.env.PORT ?? 3000), host: '0.0.0.0' });</code></pre></figure>
+
+  <p>Ang <code>package.json</code> ng isang serbisyo ay katulad ng sa library, dagdag lang ang <code>"start": "tsx src/server.ts"</code> at ang mga dependency (dito: <code>fastify</code>, <code>@aws-sdk/client-kinesis</code>, at ang mga <code>@app/*</code> na kakailanganin, lahat naka-<code>workspace:*</code>).</p>
+
+  <h3>6.5 · <code>services/batch-ingest</code> — para sa mga naipong click</h3>
+  <p>Ang mga mobile SDK na nawalan ng signal ay nag-iipon ng mga click at isasalpak nang sabay-sabay pagbalik ng koneksyon. Walang taong naghihintay ng redirect dito, kaya ibang trade-off: <em>hinihintay</em> natin ang Kinesis at nagbibigay tayo ng tapat na bilang ng tinanggap/tinanggihan.</p>
+
+  <figure class="code" data-src="services/batch-ingest/src/app.ts"><figcaption><span>services/batch-ingest/src/app.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import Fastify, { type FastifyInstance } from 'fastify';
+import { ClickEventSchema, type ClickEvent } from '@app/event-schema';
+import { verifySignature } from '@app/click-signature';
+import type { AdDirectoryEntry } from '@app/db';
+
+export interface BatchIngestDeps {
+  directoryCache: { lookup(adId: string): AdDirectoryEntry | undefined };
+  publish: (event: ClickEvent) =&gt; Promise&lt;void&gt;;
+}
+
+const MAX_BATCH_SIZE = 1000;
+const PUBLISH_CONCURRENCY = 20;
+
+async function processEvent(deps: BatchIngestDeps, raw: unknown): Promise&lt;boolean&gt; {
+  const parsed = ClickEventSchema.safeParse(raw);
+  if (!parsed.success) return false;
+
+  const event = parsed.data;
+  const entry = deps.directoryCache.lookup(event.ad_id);
+  if (!entry) return false;
+  if (!verifySignature(entry.signingSecret, event, event.sig)) return false;
+
+  try {
+    await deps.publish(event);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ponytail: chunked pool bounds in-flight PutRecords; swap for a sliding-window limiter if throughput demands
+async function processAllBounded(deps: BatchIngestDeps, events: unknown[]): Promise&lt;boolean[]&gt; {
+  const results: boolean[] = [];
+  for (let i = 0; i &lt; events.length; i += PUBLISH_CONCURRENCY) {
+    const chunk = events.slice(i, i + PUBLISH_CONCURRENCY);
+    results.push(...(await Promise.all(chunk.map((event) =&gt; processEvent(deps, event)))));
+  }
+  return results;
+}
+
+export function buildApp(deps: BatchIngestDeps): FastifyInstance {
+  const app = Fastify({ logger: true });
+
+  app.post('/v1/events/clicks', async (req, reply) =&gt; {
+    const body = req.body as { events?: unknown[] } | undefined;
+    const events = Array.isArray(body?.events) ? body.events : [];
+
+    if (events.length &gt; MAX_BATCH_SIZE) {
+      return reply.code(413).send({ error: 'batch_too_large', maxBatchSize: MAX_BATCH_SIZE });
+    }
+
+    const results = await processAllBounded(deps, events);
+    const accepted = results.filter(Boolean).length;
+
+    reply.code(202).send({ accepted, rejected: results.length - accepted });
+  });
+
+  return app;
+}</code></pre></figure>
+
+  <ul>
+    <li><strong>Walang hiwalay na endpoint auth</strong> — ang <code>sig</code> ng bawat event ay parehong integrity check <em>at</em> authentication. Ang walang <code>signingSecret</code> ay hindi makakagawa ng tanggap na event, kahit anong dagdag na scheme pa ang ilagay natin.</li>
+    <li><strong>Hindi pinapabagsak ng isang bulok na event ang buong batch</strong> — kaya bilang (<code>accepted</code>/<code>rejected</code>) ang isinasagot, hindi pasa/bagsak. <code>413</code> kapag lampas 1,000 ang isang batch.</li>
+    <li><strong>May takda ang concurrency (20)</strong> — ang 1,000 sabay-sabay na <code>PutRecord</code> ay pagpapaulan ng sarili nating bagyo.</li>
+  </ul>
+
+  <div class="note"><span class="label">Tandaan: isang tanggap na kahinaan</span>
+  <p>Kapag bumagsak ang Kinesis nang lampas sa retry ng SDK, ang na-redirect na click ay <em>hindi</em> mabibilang — naka-log, pero wala nang kaligtasan. Alam ito ng disenyo; ang tunay na lunas ay isang durable na <em>outbox</em> sa lokal na disk, at sinadyang ipinagpaliban. Ang mahalaga: alam <em>natin</em> na nandiyan ang butas, hindi natin ito natapakan nang hindi namamalayan.</p></div>
+
+  <div class="checkpoint"><span class="label">Subukan natin — ang unang tunay na click</span>
+  <p>Kailangan ng dalawang terminal. Sa una, patakbuhin ang redirect (tandaan: <code>set -a; source .env; set +a</code> muna kung bago ang terminal):</p>
+  <figure class="code"><figcaption><span>terminal 1</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>pnpm -r build
+pnpm --filter @app/click-redirect start</code></pre></figure>
+  <p>Sa pangalawa, gumawa ng may-pirmang click URL — tayo muna ang gaganap na ad server, gamit ang secret ng seeded advertiser:</p>
+  <figure class="code"><figcaption><span>terminal 2 — pekeng ad server</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>node --input-type=module -e '
+import { createHmac } from "node:crypto";
+const f = {
+  cid: "clk_demo_" + Date.now(),          // unique click id — ang dedup key
+  ad_id: "seed-ad-1",
+  campaign_id: "seed-campaign-1",
+  pub_id: "seed-publisher-1",
+  ts: new Date().toISOString(),
+};
+const sig = createHmac("sha256", "seed-signing-secret")
+  .update([f.cid, f.ad_id, f.campaign_id, f.pub_id, f.ts].join("|"))
+  .digest("hex");
+const r = encodeURIComponent("https://advertiser.example.com/landing");
+console.log("http://localhost:3000/click?" + new URLSearchParams({ ...f, sig, r }));
+'</code></pre></figure>
+  <figure class="code"><figcaption><span>terminal 2</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>curl -i "&lt;IDIKIT ANG URL&gt;"
+<span class="c"># → HTTP/1.1 302 Found, location: https://advertiser.example.com/landing</span>
+
+<span class="c"># Subukang mandaya: palitan ang ad_id sa URL → 400 invalid_request.
+# Ituro ang r sa ibang site → 400 din. Parehong-parehong error body.</span></code></pre></figure>
+  <p>Ang na-publish na event ay nasa stream na, naghihintay — <em>wala pa tayong consumer</em>. Iyan mismo ang gagawin natin sa susunod.</p></div>
+
+  <div class="pager"><a href="#controlplane">← 05 · Control Plane</a><a href="#fastlane">Susunod: 07 · Fast Lane →</a></div>
+</section>
+
+<!-- ================================================================ -->
+<section id="fastlane">
+  <div class="step-head"><span class="big-num">07</span><h2>Fast Lane — dedup, windows, at ang unang consumer</h2><span class="sp-badge">SP3 · Dedup + Aggregation</span></div>
+  <p class="step-goal">Ngayon natin bubuuin ang pinakapuso ng sistema: ang consumer na kumukuha ng mga click mula sa stream, nagtatanggal ng duplicate, nagbubuklod sa 1-minutong windows, at nagtutulak ng bilang sa DynamoDB. Dito nakatira ang "exactly once".</p>
+
+  <p>Ang pagkakasunod-sunod: <code>windowed-aggregator</code> (purong lohika, walang infra) → mga DynamoDB table → <code>click-dedup</code> → <code>hot-aggregate-store</code> → ang polling loop → ang <code>aggregator</code> service na nagdudugtong sa lahat.</p>
+
+  <h3>7.1 · <code>@app/windowed-aggregator</code> — purong windowing</h3>
+  <p>Ang mga click ay binibilang kada <code>(ad, minuto)</code> gamit ang <strong>event time</strong> (<code>ts</code> — kailan pinindot), hindi kung kailan dumating. Ang bawat window ay nananatiling bukas nang dagdag na 2 minuto pagkatapos ng dulo nito — ang <strong>watermark</strong> — para makahabol ang mga nahuling event. Walang kahit isang import ang package na ito: puro lohika, kaya mabilis at kumpleto ang unit tests nito.</p>
+
+  <figure class="code" data-src="packages/windowed-aggregator/src/index.ts"><figcaption><span>packages/windowed-aggregator/src/index.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>export interface ClosedWindow {
+  windowStart: number;
+  counts: Map&lt;string, number&gt;;
+}
+
+export interface WindowedAggregator {
+  record(adId: string, eventTimeMs: number): void;
+  peekClosedWindows(nowMs: number): ClosedWindow[];
+  removeWindow(windowStart: number): void;
+  commitFlushed(windowStart: number, adId: string, flushedCount: number): void;
+}
+
+export function createWindowedAggregator(options: { windowMs: number; watermarkMs: number }): WindowedAggregator {
+  const { windowMs, watermarkMs } = options;
+  const windows = new Map&lt;number, Map&lt;string, number&gt;&gt;();
+
+  function bucketFor(eventTimeMs: number): number {
+    return Math.floor(eventTimeMs / windowMs) * windowMs;
+  }
+
+  return {
+    record(adId, eventTimeMs) {
+      const windowStart = bucketFor(eventTimeMs);
+      const counts = windows.get(windowStart) ?? windows.set(windowStart, new Map()).get(windowStart)!;
+      counts.set(adId, (counts.get(adId) ?? 0) + 1);
+    },
+    peekClosedWindows(nowMs) {
+      const closeBefore = nowMs - watermarkMs;
+      const closed: ClosedWindow[] = [];
+      for (const [windowStart, counts] of windows) {
+        if (windowStart + windowMs &gt; closeBefore) continue;
+        closed.push({ windowStart, counts: new Map(counts) });
+      }
+      return closed;
+    },
+    removeWindow(windowStart) {
+      windows.delete(windowStart);
+    },
+    commitFlushed(windowStart, adId, flushedCount) {
+      const counts = windows.get(windowStart);
+      if (!counts) return;
+      const current = counts.get(adId);
+      if (current === undefined) return;
+      const remaining = current - flushedCount;
+      if (remaining &gt; 0) {
+        counts.set(adId, remaining);
+      } else {
+        counts.delete(adId);
+        if (counts.size === 0) windows.delete(windowStart);
+      }
+    },
+  };
+}</code></pre></figure>
+
+  <div class="why"><span class="label">Bakit tatlong hakbang (peek / commit / remove) sa halip na isang "drain"</span>
+  <p>Ang tuksong API ay isang <code>drainClosedWindows()</code> na nagbabalik at nagbubura nang sabay. Pero isipin ang kabiguan: nakuha mo ang window, sumabog ang DynamoDB sa kalagitnaan ng flush — <em>burado na ang datos, hindi pa naitatala</em>. Nawala ang bilang. Kaya hinati: ang <code>peekClosedWindows</code> ay <em>tumitingin lamang</em> (at nagbabalik pa ng kopya, para walang makagalaw sa loob), at ang <code>commitFlushed</code> ay nagbabawas <em>pagkatapos lamang</em> ng matagumpay na pagsulat, kada ad. Ang bigong ad ay mananatili para sa susunod na pagkakataon.</p></div>
+
+  <div class="warn"><span class="label">Kuwento mula sa review: ang double-count na muntik makalusot</span>
+  <p>May naunang bersyon ng lohikang ito na nag-re-retry ng <em>buong</em> window kapag nabigo ang flush ng <em>isang</em> ad — kaya ang mga ad na matagumpay nang nai-flush ay <strong>nadodoble</strong> sa muling pagtatangka, at lumalala pa sa bawat retry. Nahuli ito sa code review, at ang ayos — <code>commitFlushed(windowStart, adId, flushedCount)</code> kada ad, pagkatapos lang ng tagumpay ng ad na iyon — ang dahilan kung bakit ganiyan ang hugis ng API ngayon. Sa sistemang pera ang binibilang, ang retry na hindi idempotent ay bug sa invoice.</p></div>
+
+  <p>Walong test ang nagbabantay dito (nasa <code>src/index.test.ts</code>) — kabilang ang: hindi pa sarado ang window bago ang watermark; ang peek ay hindi nagbubura; ang nahuling event sa nabura nang window ay nagbubukas ng sariwang window (na maghihintay ulit ng watermark); at ang binabalik ng peek ay depensibang kopya. Pansinin din <em>kung paano</em> tine-test: <strong>ipinapasa ang oras bilang argumento</strong> (<code>nowMs</code>) sa halip na i-mock ang orasan — mas simple, mas mabilis, walang mahika.</p>
+
+  <h3>7.2 · Dalawang bagong DynamoDB table</h3>
+  <p>Idagdag ang <code>@aws-sdk/client-dynamodb</code> sa <code>infra/localstack</code>, at gumawa ng <code>src/tables.ts</code> na may dalawang idempotent na ensure function (parehong pattern ng stream sa Hakbang 04 — <code>DescribeTable</code> muna, gumawa kung wala, palampasin ang <code>ResourceInUseException</code>):</p>
+
+  <div class="tablewrap"><table>
+    <tr><th>Table</th><th>Key</th><th>Para saan</th></tr>
+    <tr><td><code>click-dedup</code></td><td>PK <code>cid</code> (S)</td><td>"Nakita ko na ba ang click id na ito?" May TTL sa <code>expiresAt</code>.</td></tr>
+    <tr><td><code>click-aggregates</code></td><td>PK <code>adId</code> (S), SK <code>windowStart</code> (N)</td><td>Ang mga bilang kada (ad, minuto). May TTL din — 48 oras, kusang naglilinis.</td></tr>
+  </table></div>
+
+  <figure class="code"><figcaption><span>infra/localstack/src/tables.ts — ang pattern (dedup table)</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>export const DEDUP_TABLE_NAME = 'click-dedup';
+
+export async function ensureDedupTable(client: DynamoDBClient): Promise&lt;void&gt; {
+  if (await tableExists(client, DEDUP_TABLE_NAME)) return;
+
+  try {
+    await client.send(new CreateTableCommand({
+      TableName: DEDUP_TABLE_NAME,
+      AttributeDefinitions: [{ AttributeName: 'cid', AttributeType: 'S' }],
+      KeySchema: [{ AttributeName: 'cid', KeyType: 'HASH' }],
+      BillingMode: 'PAY_PER_REQUEST',
+    }));
+  } catch (err) {
+    if (!(err instanceof ResourceInUseException)) throw err;
+  }
+
+  await client.send(new UpdateTimeToLiveCommand({
+    TableName: DEDUP_TABLE_NAME,
+    TimeToLiveSpecification: { AttributeName: 'expiresAt', Enabled: true },
+  }));
+}</code></pre></figure>
+
+  <p>Ganito rin ang <code>ensureHotAggregateTable</code> (na may composite key na <code>adId</code> + <code>windowStart</code>). Ikabit ang dalawa sa <code>main()</code> ng <code>bootstrap.ts</code>, at patakbuhin muli ang bootstrap. Ang composite key ay hindi aksidente: <em>"ang pinakabagong window ng ad X"</em> ang itatanong ng Hakbang 08, at ang key na iyan mismo ang sumasagot nang walang dagdag na index.</p>
+
+  <h3>7.3 · <code>@app/click-dedup</code> — dalawang antas ng "nakita ko na"</h3>
+
+  <figure class="code" data-src="packages/click-dedup/src/index.ts"><figcaption><span>packages/click-dedup/src/index.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import { DynamoDBClient, PutItemCommand, ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb';
+
+export interface DedupStore {
+  isNew(cid: string): Promise&lt;boolean&gt;;
+}
+
+export interface DedupRedis {
+  set(key: string, value: string, options: { NX: true; EX: number }): Promise&lt;string | null&gt;;
+}
+
+const DEDUP_TABLE_NAME = 'click-dedup';
+
+export function createDedupStore(
+  redis: DedupRedis,
+  dynamo: DynamoDBClient,
+  options: { tableName?: string; windowSeconds?: number } = {}
+): DedupStore {
+  const tableName = options.tableName ?? DEDUP_TABLE_NAME;
+  const windowSeconds = options.windowSeconds ?? 600;
+
+  return {
+    async isNew(cid) {
+      const redisResult = await redis.set(`click:${cid}`, '1', { NX: true, EX: windowSeconds });
+      if (redisResult === null) return false;
+
+      try {
+        await dynamo.send(new PutItemCommand({
+          TableName: tableName,
+          Item: {
+            cid: { S: cid },
+            expiresAt: { N: String(Math.floor(Date.now() / 1000) + windowSeconds) },
+          },
+          ConditionExpression: 'attribute_not_exists(cid)',
+        }));
+        return true;
+      } catch (err) {
+        if (err instanceof ConditionalCheckFailedException) return false;
+        throw err;
+      }
+    },
+  };
+}</code></pre></figure>
+
+  <div class="why"><span class="label">Bakit dalawang tier — at bakit hindi ito dobleng trabaho</span>
+  <p><strong>Redis muna:</strong> ang <code>SET click:&lt;cid&gt; 1 NX EX 600</code> ay <em>isang</em> atomic na operasyon na ang ibig sabihin ay "angkinin ang id na ito kung walang may-ari, mag-e-expire sa 10 minuto". Kapag may-ari na (<code>null</code> ang sagot) — duplicate, itapon, <em>walang DynamoDB na tatawagin</em>. Iyan ang karaniwang kaso, at mikrosegundo ang bilis. <strong>DynamoDB pangalawa, at kung "bago" lang ang sabi ni Redis:</strong> conditional write na <code>attribute_not_exists(cid)</code>. Kung nag-restart si Redis at nakalimot, si DynamoDB ang nakaaalala — ang <code>ConditionalCheckFailedException</code> ay nangangahulugang "duplicate pala". Iyan ang pagkakaiba ng tunay na <em>backstop</em> sa walang-kuwentang pag-uulit ng parehong tseke.</p></div>
+
+  <div class="warn"><span class="label">Kuwento mula sa trenches: ang <code>DedupRedis</code> interface</span>
+  <p>Bakit sariling maliit na interface sa halip na <code>RedisClientType</code> ng node-redis? Dahil ang mga generic default ng node-redis v4 ay gumagawa ng mga type na <em>magkamukha pero hindi magkatugma</em> kapag tumawid sa hangganan ng mga package — nagkalat ng hindi maintindihang type error sa buong workspace. Ang lunas: isang structural na interface na naglalarawan lang ng kailangan natin (<code>set</code> na may <code>NX</code>/<code>EX</code>). Bonus: mas madali pang gumawa ng fake sa tests. Kapag nakakita ka ng ganitong "maliit na sariling interface" sa repo, ito ang dahilan.</p></div>
+
+  <h3>7.4 · <code>@app/hot-aggregate-store</code> — atomic na pagdaragdag</h3>
+
+  <figure class="code"><figcaption><span>packages/hot-aggregate-store/src/index.ts — ang flush</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>const HOT_AGGREGATE_TABLE_NAME = 'click-aggregates';
+const TTL_SECONDS = 48 * 3600;
+
+export interface HotAggregateStore {
+  flush(adId: string, windowStart: number, delta: number): Promise&lt;void&gt;;
+}
+
+export function createHotAggregateStore(
+  dynamo: DynamoDBClient,
+  tableName: string = HOT_AGGREGATE_TABLE_NAME
+): HotAggregateStore {
+  return {
+    async flush(adId, windowStart, delta) {
+      await dynamo.send(new UpdateItemCommand({
+        TableName: tableName,
+        Key: {
+          adId: { S: adId },
+          windowStart: { N: String(windowStart) },
+        },
+        UpdateExpression: 'ADD #c :delta SET expiresAt = :expiresAt',
+        ExpressionAttributeNames: { '#c': 'count' },
+        ExpressionAttributeValues: {
+          ':delta': { N: String(delta) },
+          ':expiresAt': { N: String(Math.floor(Date.now() / 1000) + TTL_SECONDS) },
+        },
+      }));
+    },
+  };
+}</code></pre></figure>
+
+  <div class="why"><span class="label">Bakit <code>ADD</code> at hinding-hindi overwrite</span>
+  <p>Isipin: na-flush na ang window ng 9:14 na may 42 na click. Pagkatapos, dumating ang isang tunay na nahuling event para sa 9:14 — magbubukas ito ng sariwang window na may bilang na 1, at sa susunod na tick, ifa-flush din. Kung <code>PutItem</code> ang gamit, ang 42 ay magiging <strong>1</strong>. Sa <code>ADD</code>, magiging <strong>43</strong> — tama. Ang gandang bahagi: hindi ito espesyal na kaso — parehong daloy lang ng lahat ng window. (At oo, <code>#c</code> ang pangalan ng column dahil ang <code>count</code> ay reserved word sa DynamoDB — aral na libre.)</p></div>
+
+  <h3>7.5 · <code>@app/kinesis-consumer-loop</code> — ang tagabasa ng stream</h3>
+  <p>Paano nagbabasa ang isang consumer? <code>GetShardIterator</code> para sa panimulang posisyon sa isang shard, tapos paulit-ulit na <code>GetRecords</code> gamit ang iterator na ibinabalik ng bawat tawag:</p>
+
+  <figure class="code" data-src="packages/kinesis-consumer-loop/src/index.ts"><figcaption><span>packages/kinesis-consumer-loop/src/index.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import { KinesisClient, GetShardIteratorCommand, GetRecordsCommand } from '@aws-sdk/client-kinesis';
+
+export interface PollingConsumerOptions {
+  kinesis: KinesisClient;
+  streamName: string;
+  shardId: string;
+  onRecord: (data: Buffer, meta: { sequenceNumber: string }) =&gt; Promise&lt;void&gt;;
+  pollIntervalMs?: number;
+  shardIteratorType?: 'LATEST' | 'TRIM_HORIZON';
+  signal?: AbortSignal;
+}
+
+export async function runPollingConsumer(options: PollingConsumerOptions): Promise&lt;void&gt; {
+  const { kinesis, streamName, shardId, onRecord, signal } = options;
+  const pollIntervalMs = options.pollIntervalMs ?? 1000;
+
+  let { ShardIterator: iterator } = await kinesis.send(new GetShardIteratorCommand({
+    StreamName: streamName,
+    ShardId: shardId,
+    ShardIteratorType: options.shardIteratorType ?? 'LATEST',
+  }));
+
+  while (iterator &amp;&amp; !signal?.aborted) {
+    const { Records, NextShardIterator } = await kinesis.send(new GetRecordsCommand({ ShardIterator: iterator }));
+
+    for (const record of Records ?? []) {
+      try {
+        await onRecord(Buffer.from(record.Data!), { sequenceNumber: record.SequenceNumber! });
+      } catch (err) {
+        console.error('consumer callback failed for record, skipping', { sequenceNumber: record.SequenceNumber, err });
+      }
+    }
+
+    iterator = NextShardIterator;
+    if (!Records || Records.length === 0) {
+      await new Promise((resolve) =&gt; setTimeout(resolve, pollIntervalMs));
+    }
+  }
+}</code></pre></figure>
+
+  <ul>
+    <li><strong>Bakit polling at hindi ang mas magarang <code>SubscribeToShard</code>?</strong> Sinadyang paglihis sa disenyo sa papel: ang enhanced fan-out ay HTTP/2 streaming na hindi ginagaya ng LocalStack — magiging hindi na-te-test ang consumer sa tanging kapaligirang tinatakbuhan natin. Ang polling ay gumagana nang <em>pareho</em> sa LocalStack at sa totoong AWS, at ang halaga — ilang daang millisecond ng dagdag na latency — ay walang kabuluhan sa tabi ng 60-segundong window.</li>
+    <li><strong>Poison-pill isolation:</strong> ang <code>try/catch</code> kada record ay nagsisiguro na ang isang bulok na record ay hindi makakapagpahinto sa lahat ng nakapila sa likod nito. Naka-log ang sequence number para mahanap mo siya mamaya.</li>
+    <li><strong><code>AbortSignal</code></strong> ang malinis na paraan ng paghinto — kakailanganin ito ng mga test (at ng graceful shutdown balang araw).</li>
+  </ul>
+
+  <div class="note"><span class="label">Tandaan: ang totoong kasaysayan ng package na ito</span>
+  <p>Sa aktwal na pagbuo, ang loop na ito ay <em>inline</em> muna sa aggregator noong SP3, at hinugot bilang shared package noong SP5 — nang dumating ang pangalawang consumer at may pangatlo nang nakaplano. Iyan ang tamang timing ng extraction: <strong>kongkretong duplikasyon, hindi hula.</strong> Sa gabay na ito, dumiretso na tayo sa hinugot na anyo para hindi ka magsulat ng code na itatapon mo rin — pero tandaan ang aral: hindi kasalanang magsimula nang inline.</p></div>
+
+  <h3>7.6 · <code>services/aggregator</code> — pagdudugtong</h3>
+  <p>Ang purong core (madaling i-test gamit ang mga fake):</p>
+
+  <figure class="code" data-src="services/aggregator/src/core.ts"><figcaption><span>services/aggregator/src/core.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import type { DedupStore } from '@app/click-dedup';
+import type { WindowedAggregator } from '@app/windowed-aggregator';
+import type { HotAggregateStore } from '@app/hot-aggregate-store';
+
+export interface RawClickEvent {
+  cid: string;
+  ad_id: string;
+  ts: string;
+}
+
+export interface ConsumerDeps {
+  dedupStore: Pick&lt;DedupStore, 'isNew'&gt;;
+  aggregator: Pick&lt;WindowedAggregator, 'record'&gt;;
+}
+
+export async function handleRecord(deps: ConsumerDeps, event: RawClickEvent): Promise&lt;void&gt; {
+  const isNew = await deps.dedupStore.isNew(event.cid);
+  if (!isNew) return;
+  deps.aggregator.record(event.ad_id, new Date(event.ts).getTime());
+}
+
+export async function flushClosedWindows(
+  aggregator: Pick&lt;WindowedAggregator, 'peekClosedWindows' | 'commitFlushed'&gt;,
+  hotStore: Pick&lt;HotAggregateStore, 'flush'&gt;,
+  nowMs: number
+): Promise&lt;void&gt; {
+  for (const { windowStart, counts } of aggregator.peekClosedWindows(nowMs)) {
+    for (const [adId, count] of counts) {
+      try {
+        await hotStore.flush(adId, windowStart, count);
+        aggregator.commitFlushed(windowStart, adId, count);
+      } catch (err) {
+        console.error('flush failed for adId, will retry next tick', { windowStart, adId, err });
+      }
+    }
+  }
+}</code></pre></figure>
+
+  <p>At ang manipis na shell na nagpapatakbo (pansinin ang mga numero: 60s window, 120s watermark, flush check kada 5s):</p>
+
+  <figure class="code" data-src="services/aggregator/src/poll.ts"><figcaption><span>services/aggregator/src/poll.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import { KinesisClient } from '@aws-sdk/client-kinesis';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { createClient as createRedisClient } from 'redis';
+import { runPollingConsumer } from '@app/kinesis-consumer-loop';
+import { createDedupStore } from '@app/click-dedup';
+import { createWindowedAggregator } from '@app/windowed-aggregator';
+import { createHotAggregateStore } from '@app/hot-aggregate-store';
+import { loadEnv } from '@app/config';
+import { handleRecord, flushClosedWindows, type RawClickEvent } from './core.js';
+
+const STREAM_NAME = 'ad-clicks-raw';
+const FLUSH_INTERVAL_MS = 5000;
+
+async function main() {
+  const env = loadEnv();
+  const shardId = process.env.KINESIS_SHARD_ID;
+  if (!shardId) throw new Error('KINESIS_SHARD_ID is required');
+
+  const awsClientConfig = {
+    region: env.AWS_REGION,
+    endpoint: env.AWS_ENDPOINT_URL,
+    // ponytail: LocalStack dummy creds; swap for the default AWS credential provider chain when targeting real AWS
+    credentials: { accessKeyId: 'test', secretAccessKey: 'test' },
+  };
+  const kinesis = new KinesisClient(awsClientConfig);
+  const dynamo = new DynamoDBClient(awsClientConfig);
+  const redis = createRedisClient({ url: env.REDIS_URL });
+  await redis.connect();
+
+  const dedupStore = createDedupStore(redis, dynamo);
+  const aggregator = createWindowedAggregator({ windowMs: 60_000, watermarkMs: 120_000 });
+  const hotStore = createHotAggregateStore(dynamo);
+
+  let flushing = false;
+  setInterval(() =&gt; {
+    if (flushing) return;
+    flushing = true;
+    flushClosedWindows(aggregator, hotStore, Date.now())
+      .catch((err) =&gt; console.error('flush tick failed', err))
+      .finally(() =&gt; { flushing = false; });
+  }, FLUSH_INTERVAL_MS).unref();
+
+  await runPollingConsumer({
+    kinesis,
+    streamName: STREAM_NAME,
+    shardId,
+    onRecord: async (data) =&gt; {
+      const event = JSON.parse(data.toString('utf-8')) as RawClickEvent;
+      await handleRecord({ dedupStore, aggregator }, event);
+    },
+  });
+}
+
+main().catch((err) =&gt; {
+  console.error(err);
+  process.exit(1);
+});</code></pre></figure>
+
+  <ul>
+    <li><strong>Ang <code>flushing</code> guard ay hindi palamuti:</strong> kapag umabot sa mahigit 5 segundo ang isang flush (bagal ng network, dami ng windows), ang susunod na tick ay <em>lalampasan</em> sa halip na pumatong — dalawang magkasabay na flush ng parehong window ay double-count.</li>
+    <li><strong><code>KINESIS_SHARD_ID</code> ang suweldo ng consumer:</strong> isang proseso, isang shard. Dalawa ang shard natin, kaya dalawang proseso ang patakbo sa demo. (Sa produksyon, ang orchestrator — hal. ECS — ang nagtatalaga nito; nang lokal, ikaw ang orchestrator.)</li>
+    <li><strong><code>LATEST</code> ang panimulang posisyon</strong> — mula "ngayon", hindi mula simula ng stream. Kapag namatay at nag-restart ang consumer, mawawala ang mga event na lumipas habang patay ito. Alam nating kakulangan iyan — sa Hakbang 09, makikita mo kung paano nililigtas ng exact lane ang billing kahit ganoon.</li>
+  </ul>
+
+  <div class="checkpoint"><span class="label">Subukan natin — mabuhay ang unang consumer</span>
+  <p>Idagdag muna ang mga table (muling patakbuhin ang bootstrap pagkatapos idagdag ang <code>tables.ts</code>), tapos tatlong terminal (lahat may <code>set -a; source .env; set +a</code>):</p>
+  <figure class="code"><figcaption><span>terminal 1 at 2 — isang consumer kada shard</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>pnpm --filter @app/infra-localstack bootstrap
+KINESIS_SHARD_ID=shardId-000000000000 pnpm --filter @app/aggregator start
+<span class="c"># sa terminal 2:</span>
+KINESIS_SHARD_ID=shardId-000000000001 pnpm --filter @app/aggregator start</code></pre></figure>
+  <figure class="code"><figcaption><span>terminal 3 — magpaputok ng click, tapos magmatyag</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code><span class="c"># Patakbuhin din ang click-redirect (Hakbang 06) at magpaputok ng bagong signed URL.</span>
+
+<span class="c"># (agad-agad) Kilala na ni Redis ang cid mo:</span>
+docker compose exec redis redis-cli keys 'click:clk_demo_*'
+
+<span class="c"># (pagkatapos ng 2–3 minuto) Nasa DynamoDB na ang bilang:</span>
+docker compose exec localstack awslocal dynamodb scan \
+  --table-name click-aggregates --max-items 5
+
+<span class="c"># Ang tunay na pagsubok — i-replay ang PAREHONG URL nang 5 beses:</span>
+for i in 1 2 3 4 5; do curl -s -o /dev/null "&lt;PAREHONG URL&gt;"; done
+<span class="c"># 302 pa rin ang user kada beses (hindi puwedeng masira iyon),
+# pero HINDI tumataas ang bilang: duplicate, itinapon ng dedup.</span></code></pre></figure>
+  <p><strong>Bakit 2–3 minuto?</strong> Hindi kabagalan — disenyo: 1-minutong window (event time) + 2-minutong watermark bago i-flush. Hanggang doon, ang tapat na sagot ng sistema ay "wala pa".</p></div>
+
+  <div class="pager"><a href="#ingestion">← 06 · Ingestion APIs</a><a href="#queryapi">Susunod: 08 · Query API →</a></div>
+</section>
+
+<!-- ================================================================ -->
+<section id="queryapi">
+  <div class="step-head"><span class="big-num">08</span><h2>Query API — basahin ang bilang, pero sa may-ari lang</h2><span class="sp-badge">SP4 · Real-time Query</span></div>
+  <p class="step-goal">May bilang na tayo sa DynamoDB; ngayon ang pinto ng dashboard: <code>GET /v1/ads/:adId/aggregates</code>. Maikli ang code — ang laman ng hakbang na ito ay <strong>tenant isolation</strong>: hindi lang bawal basahin ng advertiser A ang data ni B, bawal pa niyang <em>malamang umiiral</em> si B.</p>
+
+  <h3>8.1 · <code>@app/db</code> — ownership at API key resolution</h3>
+  <p>Dalawang bagong query sa <code>packages/db/src/ownership.ts</code> (idagdag din sila sa barrel). Ipinapakita ko na rin ang pangatlong function — para sa campaign — na gagamitin natin sa Hakbang 09, dahil iisang pattern lang sila:</p>
+
+  <figure class="code" data-src="packages/db/src/ownership.ts"><figcaption><span>packages/db/src/ownership.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import type { PrismaClient } from '@prisma/client';
+import { createHash } from 'node:crypto';
+
+export async function getAdOwnerAdvertiserId(client: PrismaClient, adId: string): Promise&lt;string | null&gt; {
+  const ad = await client.ad.findUnique({
+    where: { id: adId },
+    select: { campaign: { select: { advertiserId: true } } },
+  });
+  return ad?.campaign.advertiserId ?? null;
+}
+
+export async function getCampaignOwnerAdvertiserId(client: PrismaClient, campaignId: string): Promise&lt;string | null&gt; {
+  const campaign = await client.campaign.findUnique({
+    where: { id: campaignId },
+    select: { advertiserId: true },
+  });
+  return campaign?.advertiserId ?? null;
+}
+
+export async function resolveApiKey(client: PrismaClient, rawKey: string): Promise&lt;{ advertiserId: string } | null&gt; {
+  const hashedKey = createHash('sha256').update(rawKey).digest('hex');
+  const apiKey = await client.apiKey.findUnique({
+    where: { hashedKey },
+    select: { advertiserId: true, revokedAt: true },
+  });
+  if (!apiKey || apiKey.revokedAt) return null;
+  return { advertiserId: apiKey.advertiserId };
+}</code></pre></figure>
+
+  <div class="why"><span class="label">Bakit HINDI ginamit muli ang directory-cache ng Hakbang 06</span>
+  <p>Nakatutuksong sagot: "may cache na tayo ng mga ad, gamitin na iyon!" Pero ang cache na iyon ay nagsisilbi lamang ng mga ad sa mga <strong>ACTIVE</strong> na campaign — tama para sa redirect (bawal nang i-click ang naka-pause), pero <em>baligtad</em> dito: ang advertiser na nagtatanong tungkol sa kahapong numero ng kanyang naka-pause na campaign ay ganap na lehitimo. Kung ipinilit natin ang muling paggamit, magi-404 tayo sa mga tapat na tanong. Parehong hugis ng problema, <em>magkaibang filter</em> — kaya magkaibang function, hindi iisang function na may idinikit na flag. Ganyan mag-isip ang senior tungkol sa "reuse".</p></div>
+
+  <p>Sa <code>resolveApiKey</code>: hina-hash ang hilaw na key at ang <em>hash</em> ang hinahanap — kailanman ay walang hilaw na key sa database. Ang nabawi ngunit may <code>revokedAt</code> ay <code>null</code> din ang sagot: <strong>fail closed</strong>, walang pagtatangi sa "wala" at "binawi na".</p>
+
+  <h3>8.2 · <code>@app/hot-aggregate-store</code> — basahin ang pinakabagong window</h3>
+  <p>Idagdag sa parehong package ang read function. Dito nagbabayad ang composite key ng Hakbang 07 — walang bagong index na kailangan:</p>
+
+  <figure class="code"><figcaption><span>packages/hot-aggregate-store/src/index.ts — ang read</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>export async function getLatestAggregate(
+  dynamo: DynamoDBClient,
+  adId: string,
+  tableName: string = HOT_AGGREGATE_TABLE_NAME
+): Promise&lt;{ windowStart: number; clicks: number } | null&gt; {
+  const { Items } = await dynamo.send(new QueryCommand({
+    TableName: tableName,
+    KeyConditionExpression: 'adId = :adId',
+    ExpressionAttributeValues: { ':adId': { S: adId } },
+    ScanIndexForward: false,
+    Limit: 1,
+  }));
+
+  const item = Items?.[0];
+  if (!item) return null;
+
+  return {
+    windowStart: Number(item.windowStart.N),
+    clicks: Number(item.count.N),
+  };
+}</code></pre></figure>
+
+  <p>Ang <code>ScanIndexForward: false, Limit: 1</code> ay "pinakamalaking <code>windowStart</code>, isa lang" — ang pinakabagong window. Ang <code>null</code> ay <em>hindi</em> error: ang ad na walang click sa nakalipas na 48 oras ay talagang walang na-flush — sasagutin natin iyon ng <code>clicks: 0</code>, hindi ng 404.</p>
+
+  <h3>8.3 · <code>services/query-api</code> — ang endpoint</h3>
+
+  <figure class="code" data-src="services/query-api/src/app.ts"><figcaption><span>services/query-api/src/app.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import Fastify, { type FastifyInstance } from 'fastify';
+
+export interface QueryApiDeps {
+  resolveApiKey(rawKey: string): Promise&lt;{ advertiserId: string } | null&gt;;
+  getAdOwner(adId: string): Promise&lt;string | null&gt;;
+  getLatestAggregate(adId: string): Promise&lt;{ windowStart: number; clicks: number } | null&gt;;
+}
+
+const WINDOW_MS = 60_000;
+
+export function buildApp(deps: QueryApiDeps): FastifyInstance {
+  const app = Fastify({ logger: true });
+
+  app.get&lt;{ Params: { adId: string } }&gt;('/v1/ads/:adId/aggregates', async (req, reply) =&gt; {
+    const authHeader = req.headers.authorization;
+    const rawKey = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : undefined;
+    if (!rawKey) {
+      return reply.code(401).send({ error: 'unauthorized' });
+    }
+
+    const apiKey = await deps.resolveApiKey(rawKey);
+    if (!apiKey) {
+      return reply.code(401).send({ error: 'unauthorized' });
+    }
+
+    const { adId } = req.params;
+    const ownerAdvertiserId = await deps.getAdOwner(adId);
+    if (!ownerAdvertiserId || ownerAdvertiserId !== apiKey.advertiserId) {
+      return reply.code(404).send({ error: 'not_found' });
+    }
+
+    const latest = await deps.getLatestAggregate(adId);
+    const now = Date.now();
+    const windowStart = latest?.windowStart ?? Math.floor(now / WINDOW_MS) * WINDOW_MS;
+
+    reply.send({
+      adId,
+      windowStart: new Date(windowStart).toISOString(),
+      clicks: latest?.clicks ?? 0,
+      exact: false,
+      asOf: new Date(now).toISOString(),
+    });
+  });
+
+  return app;
+}</code></pre></figure>
+
+  <div class="why"><span class="label">Ang isang linyang nagpapatupad ng tenant isolation</span>
+  <p>Tingnan: <code>if (!ownerAdvertiserId || ownerAdvertiserId !== apiKey.advertiserId)</code> — ang <em>hindi umiiral</em> na ad at ang ad na <em>pag-aari ng iba</em> ay dumadaan sa <strong>iisang branch</strong> at lumalabas na <strong>byte-por-byte na magkaparehong 404</strong>. Kung hiwalay silang "404" at "403", kayang tuklasin ng kakumpitensya kung aling mga ad id ang umiiral sa pamamagitan lang ng status code. Ang <code>401</code> naman ay para sa <em>sirang kredensyal</em> lang (wala, huwad, o binawi) — bago pa man tumingin sa params. At pansinin ang <code>exact: false</code> sa sagot: tapat ang API na tantiya ito. Ang pang-invoice na numero ay ibang pinto (Hakbang 09), may markang <code>exact: true</code>.</p></div>
+
+  <p>Ang <code>server.ts</code> ay pamilyar na: <code>loadEnv</code>, DynamoDB client na nakaturo sa LocalStack, at <code>buildApp</code> na binibigyan ng tatlong tunay na function (port 3002). Anim na kaso ang test matrix ng <code>app.test.ts</code> — sariling ad na may data (200), sariling ad na walang data (200, <code>clicks: 0</code>), ad ng iba (404), walang ganoong ad (404 na kaparehong-kapareho), sirang header (401), binawing key (401) — lahat gamit ang <code>app.inject()</code> ng Fastify at mga fake dependency: walang totoong network o database sa tests na ito.</p>
+
+  <div class="checkpoint"><span class="label">Subukan natin</span>
+  <figure class="code"><figcaption><span>terminal</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>pnpm --filter @app/query-api start   <span class="c"># bagong terminal, may .env</span>
+
+<span class="c"># Gamitin ang API key na ibinigay ng seed sa Hakbang 05:</span>
+curl -s -H "Authorization: Bearer &lt;ANG_SEED_API_KEY_MO&gt;" \
+  http://localhost:3002/v1/ads/seed-ad-1/aggregates
+<span class="c"># → {"adId":"seed-ad-1","windowStart":"…","clicks":1,"exact":false,"asOf":"…"}</span>
+
+<span class="c"># Maling key → 401. Ad na hindi sa iyo o hindi umiiral → parehong 404.</span>
+curl -s http://localhost:3002/v1/ads/seed-ad-1/aggregates          <span class="c"># 401</span>
+curl -s -H "Authorization: Bearer &lt;KEY&gt;" \
+  http://localhost:3002/v1/ads/walang-ganito/aggregates             <span class="c"># 404</span></code></pre></figure></div>
+
+  <div class="pager"><a href="#fastlane">← 07 · Fast Lane</a><a href="#exactlane">Susunod: 09 · Exact Lane →</a></div>
+</section>
+
+<!-- ================================================================ -->
+<section id="exactlane">
+  <div class="step-head"><span class="big-num">09</span><h2>Exact Lane — archive, reconciliation, at billing</h2><span class="sp-badge">SP5 · Archive + Billing</span></div>
+  <p class="step-goal">Ngayon ang pera. Ang fast lane ay tantiya na mabilis; ang lane na ito ang pinagbabatayan ng invoice: <em>bawat</em> raw event papunta sa S3 bilang Parquet, isang reconciliation query na muling nagko-compute ng eksaktong bilang, at ang statements na binabasa ng billing.</p>
+
+  <div class="why"><span class="label">Ang pilosopiya ng lane na ito: gawing nakakabagot ang muling pagproseso</span>
+  <p>Ang archive ay <strong>hindi dinededup — sinadya</strong>. Isinusulat ng archiver ang <em>lahat</em> ng makita nito, kasama ang mga retry at duplicate, walang filter. Ang katumpakan ay nakatira sa <em>isang SQL query</em>: <code>COUNT(DISTINCT cid)</code> sa reconciliation time. Kaya ang pag-replay ng parehong data ay laging parehong sagot. May bug? Patakbuhin muli ang query. Nag-update ang fraud model? Patakbuhin muli ang query. Kung pre-filtered ang archive, bawat replay ay nakasandal sa pag-asang tama ang filter <em>noon pa man</em>.</p></div>
+
+  <h3>9.1 · Bootstrap: ang bucket at ang statements table</h3>
+  <p>Idagdag ang <code>@aws-sdk/client-s3</code> sa infra package. Ang bucket (pansinin: <code>ad-clicks-raw</code> din ang pangalan, katulad ng stream — iisang "hilaw na click" na konsepto sa dalawang anyo):</p>
+
+  <figure class="code" data-src="infra/localstack/src/buckets.ts"><figcaption><span>infra/localstack/src/buckets.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import { S3Client, CreateBucketCommand, HeadBucketCommand } from '@aws-sdk/client-s3';
+
+export const RAW_ARCHIVE_BUCKET_NAME = 'ad-clicks-raw';
+
+async function bucketExists(client: S3Client, bucket: string): Promise&lt;boolean&gt; {
+  try {
+    await client.send(new HeadBucketCommand({ Bucket: bucket }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function ensureRawArchiveBucket(client: S3Client): Promise&lt;void&gt; {
+  if (await bucketExists(client, RAW_ARCHIVE_BUCKET_NAME)) return;
+  await client.send(new CreateBucketCommand({ Bucket: RAW_ARCHIVE_BUCKET_NAME }));
+}</code></pre></figure>
+
+  <p>Sa <code>tables.ts</code>, idagdag ang <code>click-statements</code> (PK <code>campaignId</code>, SK <code>period</code> na <code>YYYY-MM-DD</code>) — parehong ensure pattern. Isang makabuluhang kaibahan: <strong>walang TTL</strong>. Ang mga bilang na pinag-iimbentaryo ng pera ay hindi nag-e-expire.</p>
+
+  <h3>9.2 · <code>@app/parquet-archive</code> — DuckDB bilang lokal na Athena</h3>
+  <p>Sa totoong AWS, ang reconciliation ay Athena query sa ibabaw ng S3. Nang lokal, ang <strong>DuckDB</strong> ang gaganap: isang SQL engine na nakatira <em>sa loob mismo</em> ng Node process (walang server), marunong magbasa't magsulat ng Parquet nang direkta sa S3. Ang package na ito ang may hawak ng dalawang operasyon ng lane: <em>isulat ang batch</em> at <em>i-reconcile ang isang araw</em>.</p>
+
+  <figure class="code" data-src="packages/parquet-archive/src/index.ts"><figcaption><span>packages/parquet-archive/src/index.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import { Database } from 'duckdb-async';
+
+export interface RawArchiveEvent {
+  cid: string;
+  ad_id: string;
+  campaign_id: string;
+  pub_id: string;
+  ts: string;
+  sig: string;
+  receivedAt: number;
+}
+
+interface ArchiveDbEnv {
+  AWS_ENDPOINT_URL?: string;
+}
+
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+export function bucketPrefixForDate(date: string): string {
+  if (!DATE_PATTERN.test(date)) throw new Error(`invalid date: ${date}`);
+  return `s3://ad-clicks-raw/dt=${date}/`;
+}
+
+export async function createArchiveDb(env: ArchiveDbEnv): Promise&lt;Database&gt; {
+  const db = await Database.create(':memory:');
+  const endpointHost = new URL(env.AWS_ENDPOINT_URL!).host;
+  await db.exec(`
+    INSTALL httpfs; LOAD httpfs;
+    SET s3_endpoint='${endpointHost}';
+    SET s3_url_style='path';
+    SET s3_use_ssl=false;
+    SET s3_access_key_id='test';
+    SET s3_secret_access_key='test';
+  `);
+  return db;
+}
+
+export async function archiveBatch(db: Database, bucketPrefix: string, events: RawArchiveEvent[]): Promise&lt;void&gt; {
+  if (events.length === 0) return;
+
+  await db.run(
+    'CREATE OR REPLACE TEMP TABLE batch(cid VARCHAR, ad_id VARCHAR, campaign_id VARCHAR, pub_id VARCHAR, ts VARCHAR, sig VARCHAR, receivedAt BIGINT)'
+  );
+  const placeholders = events.map(() =&gt; '(?, ?, ?, ?, ?, ?, ?)').join(', ');
+  const params = events.flatMap((e) =&gt; [e.cid, e.ad_id, e.campaign_id, e.pub_id, e.ts, e.sig, e.receivedAt]);
+  await db.run(`INSERT INTO batch VALUES ${placeholders}`, ...params);
+
+  const key = `part-${Date.now()}-${Math.random().toString(36).slice(2)}.parquet`;
+  await db.run(`COPY batch TO '${bucketPrefix}${key}' (FORMAT PARQUET)`);
+}
+
+export async function reconcileDate(
+  db: Database,
+  bucketPrefix: string,
+  excludedCids: ReadonlySet&lt;string&gt; = new Set()
+): Promise&lt;{ campaignId: string; billedClicks: number; excludedInvalidClicks: number }[]&gt; {
+  const excludedList = [...excludedCids];
+  const isExcludedExpr = excludedList.length &gt; 0
+    ? `cid IN (${excludedList.map(() =&gt; '?').join(', ')})`
+    : 'false';
+
+  const rows = await db.all(
+    `SELECT
+       campaign_id AS campaignId,
+       COUNT(DISTINCT CASE WHEN NOT (${isExcludedExpr}) THEN cid END) AS billedClicks,
+       COUNT(DISTINCT CASE WHEN (${isExcludedExpr}) THEN cid END) AS excludedInvalidClicks
+     FROM read_parquet('${bucketPrefix}*.parquet')
+     GROUP BY campaign_id`,
+    ...excludedList,
+    ...excludedList
+  );
+
+  return rows.map((row: Record&lt;string, unknown&gt;) =&gt; ({
+    campaignId: String(row.campaignId),
+    billedClicks: Number(row.billedClicks),
+    excludedInvalidClicks: Number(row.excludedInvalidClicks),
+  }));
+}</code></pre></figure>
+
+  <ul>
+    <li><strong>Maraming maliliit na immutable na file</strong> (<code>part-&lt;oras&gt;-&lt;random&gt;.parquet</code>) — dinadagdagan lang, hindi kailanman binabago, kaya walang read-modify-write na sakit ng ulo. Ang read side ay simpleng <code>read_parquet('…/*.parquet')</code>.</li>
+    <li><strong>Ang <code>excludedCids</code> ay isang paunang-nakuhang <code>Set</code></strong>, hindi isang <code>isInvalid(cid)</code> na callback kada row — milyun-milyong row ang dadaanan ng query; ang paghihintay sa isang JS callback bawat row ay pagsira sa mismong dahilan kung bakit SQL ito. Nakalagay na ang upuan ng fraud (Hakbang 10) — <code>'false'</code> muna ang predicate habang walang laman.</li>
+    <li><strong>Ang date validation ang hangganan laban sa injection</strong> — ang <code>date</code> ay idinidikit sa S3 path at sa SQL, kaya ang <code>^\d{4}-\d{2}-\d{2}$</code> na regex sa <code>bucketPrefixForDate</code> (at muli sa API layer) ay seguridad, hindi kaayusan lang.</li>
+  </ul>
+
+  <h3>9.3 · <code>services/archiver</code> — ang pangalawang consumer</h3>
+  <p>Ang Parquet ay columnar — ang pagsusulat ng isang row bawat file ay pagtalikod sa format. Kaya nag-iipon tayo: isang buffer na may hangganan sa <em>dalawang</em> aspeto — 500 record <em>o</em> 30 segundo, alin man ang mauna. Ang tahimik na stream ay nakaka-flush pa rin agad; ang abalang stream ay hindi lumolobo:</p>
+
+  <figure class="code" data-src="services/archiver/src/core.ts"><figcaption><span>services/archiver/src/core.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>export interface BatchBuffer&lt;T&gt; {
+  add(item: T, nowMs?: number): void;
+  shouldFlush(nowMs: number): boolean;
+  drain(): T[];
+}
+
+export function createBatchBuffer&lt;T&gt;(options: { maxSize: number; maxAgeMs: number }): BatchBuffer&lt;T&gt; {
+  let items: T[] = [];
+  let firstItemAt: number | null = null;
+
+  return {
+    // ponytail: nowMs defaults to Date.now() so production callers (run.ts) need not pass it;
+    // tests pin an explicit value instead of mocking the clock, matching the sub-project 3
+    // windowed-aggregator convention of explicit time injection over internal wall-clock reads.
+    add(item, nowMs = Date.now()) {
+      if (items.length === 0) firstItemAt = nowMs;
+      items.push(item);
+    },
+    shouldFlush(nowMs) {
+      if (items.length &gt;= options.maxSize) return true;
+      if (firstItemAt !== null &amp;&amp; nowMs - firstItemAt &gt;= options.maxAgeMs) return true;
+      return false;
+    },
+    drain() {
+      const drained = items;
+      items = [];
+      firstItemAt = null;
+      return drained;
+    },
+  };
+}</code></pre></figure>
+
+  <figure class="code" data-src="services/archiver/src/run.ts"><figcaption><span>services/archiver/src/run.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import { KinesisClient } from '@aws-sdk/client-kinesis';
+import { runPollingConsumer } from '@app/kinesis-consumer-loop';
+import { createArchiveDb, archiveBatch, bucketPrefixForDate, type RawArchiveEvent } from '@app/parquet-archive';
+import { loadEnv } from '@app/config';
+import { createBatchBuffer } from './core.js';
+
+const STREAM_NAME = 'ad-clicks-raw';
+const FLUSH_CHECK_INTERVAL_MS = 5000;
+
+function todayDateString(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function main() {
+  const env = loadEnv();
+  const shardId = process.env.KINESIS_SHARD_ID;
+  if (!shardId) throw new Error('KINESIS_SHARD_ID is required');
+
+  const kinesis = new KinesisClient({
+    region: env.AWS_REGION,
+    endpoint: env.AWS_ENDPOINT_URL,
+    // ponytail: LocalStack dummy creds; swap for the default AWS credential provider chain when targeting real AWS
+    credentials: { accessKeyId: 'test', secretAccessKey: 'test' },
+  });
+  const db = await createArchiveDb(env);
+  const buffer = createBatchBuffer&lt;RawArchiveEvent&gt;({ maxSize: 500, maxAgeMs: 30_000 });
+
+  // Partition each drained batch by the event's OWN event-time date (from `ts`), not flush time,
+  // so an at-least-once duplicate of a cid that straddles UTC midnight always lands in the same
+  // date partition — reconciliation's COUNT(DISTINCT cid) then dedups it (a flush-time partition
+  // would double-count it across two daily statements). A malformed/absent ts falls back to today.
+  function dateForEvent(event: RawArchiveEvent): string {
+    return /^\d{4}-\d{2}-\d{2}/.test(event.ts) ? event.ts.slice(0, 10) : todayDateString();
+  }
+
+  let flushing = false;
+  setInterval(() =&gt; {
+    if (flushing) return;
+    if (!buffer.shouldFlush(Date.now())) return;
+    flushing = true;
+    const batch = buffer.drain();
+    (async () =&gt; {
+      const byDate = new Map&lt;string, RawArchiveEvent[]&gt;();
+      for (const event of batch) {
+        const date = dateForEvent(event);
+        let group = byDate.get(date);
+        if (!group) {
+          group = [];
+          byDate.set(date, group);
+        }
+        group.push(event);
+      }
+      // sequential per-date writes (archiveBatch is not concurrency-safe on its shared temp table)
+      for (const [date, events] of byDate) {
+        await archiveBatch(db, bucketPrefixForDate(date), events);
+      }
+    })()
+      .catch((err) =&gt; console.error('archive flush failed, batch lost', { size: batch.length, err }))
+      .finally(() =&gt; { flushing = false; });
+  }, FLUSH_CHECK_INTERVAL_MS).unref();
+
+  await runPollingConsumer({
+    kinesis,
+    streamName: STREAM_NAME,
+    shardId,
+    onRecord: async (data) =&gt; {
+      buffer.add(JSON.parse(data.toString('utf-8')) as RawArchiveEvent);
+    },
+  });
+}
+
+main().catch((err) =&gt; {
+  console.error(err);
+  process.exit(1);
+});</code></pre></figure>
+
+  <div class="warn"><span class="label">Kuwento mula sa review: ang hatinggabing double-count</span>
+  <p>Ang unang bersyon ay nagpa-partition ayon sa <em>oras ng flush</em> — isang <code>prefix</code> kada drain. Kinuwestiyon ito ng review: ang duplicate ng isang <code>cid</code> na tumawid ng UTC hatinggabi (orihinal bandang 23:59:58, retry bandang 00:00:15) ay mahuhulog sa <strong>dalawang magkaibang partition</strong> — at dahil kada partition ang <code>COUNT(DISTINCT cid)</code>, <strong>masisingil nang dalawang beses</strong> sa dalawang magkaibang araw na statement. Ang ayos: i-partition ayon sa <em>sariling <code>ts</code> ng event</em>. Pangalawang review-catch sa parehong file: ang paggrupo ay dapat nasa <em>loob</em> ng error boundary — ang isang bulok na <code>ts</code> ay hindi dapat makapag-crash ng flush; may fallback ito sa "ngayon". At pangatlo: ang flush ay single-flight, dahil ang <code>archiveBatch</code> ay gumagamit ng iisang temp table — dalawang sabay na flush ay magbabanggaan doon.</p></div>
+
+  <h3>9.4 · <code>@app/statements-store</code> — sinadyang kabaligtaran ng fast lane</h3>
+
+  <figure class="code" data-src="packages/statements-store/src/index.ts"><figcaption><span>packages/statements-store/src/index.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import { DynamoDBClient, PutItemCommand, QueryCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
+
+const STATEMENTS_TABLE_NAME = 'click-statements';
+
+export interface Statement {
+  campaignId: string;
+  period: string;
+  billedClicks: number;
+  excludedInvalidClicks: number;
+  reconciledAt: string;
+  sourceArchive: string;
+}
+
+export async function putStatement(dynamo: DynamoDBClient, statement: Statement): Promise&lt;void&gt; {
+  await dynamo.send(new PutItemCommand({
+    TableName: STATEMENTS_TABLE_NAME,
+    Item: {
+      campaignId: { S: statement.campaignId },
+      period: { S: statement.period },
+      billedClicks: { N: String(statement.billedClicks) },
+      excludedInvalidClicks: { N: String(statement.excludedInvalidClicks) },
+      reconciledAt: { S: statement.reconciledAt },
+      sourceArchive: { S: statement.sourceArchive },
+    },
+  }));
+}
+
+function toStatement(item: Record&lt;string, { S?: string; N?: string }&gt;): Statement {
+  return {
+    campaignId: item.campaignId.S!,
+    period: item.period.S!,
+    billedClicks: Number(item.billedClicks.N),
+    excludedInvalidClicks: Number(item.excludedInvalidClicks.N),
+    reconciledAt: item.reconciledAt.S!,
+    sourceArchive: item.sourceArchive.S!,
+  };
+}
+
+export async function getStatement(dynamo: DynamoDBClient, campaignId: string, period?: string): Promise&lt;Statement | null&gt; {
+  if (period) {
+    const { Item } = await dynamo.send(new GetItemCommand({
+      TableName: STATEMENTS_TABLE_NAME,
+      Key: { campaignId: { S: campaignId }, period: { S: period } },
+    }));
+    return Item ? toStatement(Item as Record&lt;string, { S?: string; N?: string }&gt;) : null;
+  }
+
+  const { Items } = await dynamo.send(new QueryCommand({
+    TableName: STATEMENTS_TABLE_NAME,
+    KeyConditionExpression: 'campaignId = :campaignId',
+    ExpressionAttributeValues: { ':campaignId': { S: campaignId } },
+    ScanIndexForward: false,
+    Limit: 1,
+  }));
+  const item = Items?.[0];
+  return item ? toStatement(item as Record&lt;string, { S?: string; N?: string }&gt;) : null;
+}</code></pre></figure>
+
+  <div class="why"><span class="label">Bakit <code>PutItem</code> (overwrite) dito, samantalang <code>ADD</code> doon</span>
+  <p>Sinadyang magkabaligtaran ang dalawang store, at parehong tama: ang <em>hot aggregate</em> ay pinagdadagdagan ng mga delta habang tumatakbo ang mundo, kaya <code>ADD</code>; ang <em>statement</em> ay resulta ng buong muling pagko-compute mula sa kumpletong archive ng araw na iyon, kaya ang muling pagpapatakbo ay dapat <strong>pumalit</strong>, hindi pumatong. Kung <code>ADD</code> ang statements, ang bawat rerun ay magdodoble ng singil. Ang test suites ng dalawang store ay nag-a-assert sa <em>magkabaligtarang</em> direksyon — mahusay na halimbawa ng test bilang dokumentasyon ng intensyon.</p></div>
+
+  <h3>9.5 · <code>services/billing-api</code> — ang pinto ng pera</h3>
+  <p>Dalawang endpoint, dalawang magkaibang tiwala: ang <em>statement read</em> para sa advertiser (Bearer key, parehong tenant isolation ng Hakbang 08, pero sa antas ng campaign) at ang <em>reconciliation rerun</em> para sa ops (ibang kredensyal: <code>X-Ops-Token</code> — ang advertiser key ay maling antas ng tiwala para sa "iproseso muli ang lahat"). Ang orkestrasyon ay hiwalay sa isang maliit, puro-lohikang file:</p>
+
+  <figure class="code" data-src="services/billing-api/src/reconciliation.ts"><figcaption><span>services/billing-api/src/reconciliation.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>export interface ReconciliationResult {
+  campaignId: string;
+  billedClicks: number;
+  excludedInvalidClicks: number;
+}
+
+export interface ReconciliationDeps {
+  bucketPrefixForDate(date: string): string;
+  listExcludedCids(date: string): Promise&lt;Set&lt;string&gt;&gt;;
+  reconcileDate(bucketPrefix: string, excludedCids: Set&lt;string&gt;): Promise&lt;ReconciliationResult[]&gt;;
+  putStatement(statement: ReconciliationResult &amp; {
+    period: string; reconciledAt: string; sourceArchive: string;
+  }): Promise&lt;void&gt;;
+}
+
+export async function reconcileAndStore(deps: ReconciliationDeps, date: string): Promise&lt;number&gt; {
+  const prefix = deps.bucketPrefixForDate(date);
+  const excludedCids = await deps.listExcludedCids(date);
+  const results = await deps.reconcileDate(prefix, excludedCids);
+
+  const reconciledAt = new Date().toISOString();
+  for (const result of results) {
+    await deps.putStatement({ ...result, period: date, reconciledAt, sourceArchive: prefix });
+  }
+
+  return results.length;
+}</code></pre></figure>
+
+  <p>Pansinin ang <code>listExcludedCids</code> sa mga dependency — <strong>nakaupo na ang silya ng fraud</strong> bago pa ito dumating. Sa puntong ito ng pagbuo, ang server wiring ay nagpapasa ng laging-walang-laman na set (<code>async () =&gt; new Set()</code>); sa Hakbang 10, tunay na store na ang ikakabit — <em>walang ibang magbabago</em>. Ang mga route:</p>
+
+  <figure class="code" data-src="services/billing-api/src/app.ts"><figcaption><span>services/billing-api/src/app.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import Fastify, { type FastifyInstance } from 'fastify';
+
+export interface BillingApiDeps {
+  opsToken: string;
+  resolveApiKey(rawKey: string): Promise&lt;{ advertiserId: string } | null&gt;;
+  getCampaignOwner(campaignId: string): Promise&lt;string | null&gt;;
+  getStatement(campaignId: string, period?: string): Promise&lt;{
+    campaignId: string; period: string; billedClicks: number; excludedInvalidClicks: number;
+    reconciledAt: string; sourceArchive: string;
+  } | null&gt;;
+  reconcileAndStore(date: string): Promise&lt;number&gt;;
+}
+
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+export function buildApp(deps: BillingApiDeps): FastifyInstance {
+  const app = Fastify({ logger: true });
+
+  app.get&lt;{ Params: { campaignId: string }; Querystring: { period?: string } }&gt;(
+    '/v1/campaigns/:campaignId/statement',
+    async (req, reply) =&gt; {
+      const authHeader = req.headers.authorization;
+      const rawKey = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : undefined;
+      if (!rawKey) return reply.code(401).send({ error: 'unauthorized' });
+
+      const apiKey = await deps.resolveApiKey(rawKey);
+      if (!apiKey) return reply.code(401).send({ error: 'unauthorized' });
+
+      const { campaignId } = req.params;
+      const ownerAdvertiserId = await deps.getCampaignOwner(campaignId);
+      if (!ownerAdvertiserId || ownerAdvertiserId !== apiKey.advertiserId) {
+        return reply.code(404).send({ error: 'not_found' });
+      }
+
+      const statement = await deps.getStatement(campaignId, req.query.period);
+      if (!statement) return reply.code(404).send({ error: 'not_found' });
+
+      reply.send({ ...statement, exact: true });
+    }
+  );
+
+  app.post&lt;{ Params: { date: string } }&gt;('/v1/reconciliation/:date/rerun', async (req, reply) =&gt; {
+    const opsToken = req.headers['x-ops-token'];
+    if (opsToken !== deps.opsToken) return reply.code(401).send({ error: 'unauthorized' });
+
+    const { date } = req.params;
+    if (!DATE_PATTERN.test(date)) return reply.code(400).send({ error: 'invalid_date' });
+
+    const campaignsReconciled = await deps.reconcileAndStore(date);
+    reply.send({ date, campaignsReconciled });
+  });
+
+  return app;
+}</code></pre></figure>
+
+  <ul>
+    <li>Ang <code>OPS_TOKEN</code> ay binabasa ng server nang direkta sa <code>process.env</code> at <em>kailangan</em> sa startup — hindi ito idinagdag sa shared na <code>EnvSchema</code>, sa parehong dahilan ng <code>KINESIS_SHARD_ID</code>.</li>
+    <li>Ang <code>DATE_PATTERN</code> check bago tumawag sa <code>reconcileAndStore</code> ang panlabas na pader ng injection boundary na nabanggit sa 9.2.</li>
+    <li>Ang statement na "wala pa" (hindi pa na-reconcile), "hindi iyo", at "walang ganoong campaign" ay iisang <code>404</code> — pamilyar ka na sa dahilan.</li>
+  </ul>
+
+  <div class="checkpoint"><span class="label">Subukan natin — mula click hanggang statement</span>
+  <p>Patakbuhin ang archiver sa dalawang shard (dagdag sa mga naunang proseso) at ang billing API:</p>
+  <figure class="code"><figcaption><span>mga bagong terminal (may .env bawat isa)</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>KINESIS_SHARD_ID=shardId-000000000000 pnpm --filter @app/archiver start
+KINESIS_SHARD_ID=shardId-000000000001 pnpm --filter @app/archiver start
+OPS_TOKEN=dev-ops-token pnpm --filter @app/billing-api start</code></pre></figure>
+  <figure class="code"><figcaption><span>terminal ng tester</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code><span class="c"># Magpaputok ng ilang click (Hakbang 06 forge script), maghintay ng ~35s, tapos:</span>
+docker compose exec localstack awslocal s3 ls s3://ad-clicks-raw/ --recursive
+<span class="c"># → dt=2026-…/part-….parquet</span>
+
+<span class="c"># Patakbuhin ang reconciliation para sa araw na ito (ang "gabi-gabing trabaho", mano-mano):</span>
+curl -s -X POST -H "X-Ops-Token: dev-ops-token" \
+  http://localhost:3003/v1/reconciliation/$(date -u +%F)/rerun
+<span class="c"># → {"date":"2026-…","campaignsReconciled":1}</span>
+
+<span class="c"># Basahin ang statement — pansinin ang "exact": true, at kahit nagpaputok ka
+# ng mga duplicate sa Hakbang 07, isang beses lang binilang bawat cid:</span>
+curl -s -H "Authorization: Bearer &lt;ANG_SEED_API_KEY_MO&gt;" \
+  http://localhost:3003/v1/campaigns/seed-campaign-1/statement
+<span class="c"># → {"campaignId":"seed-campaign-1","period":"…","billedClicks":3,
+#    "excludedInvalidClicks":0,"exact":true,…}</span></code></pre></figure></div>
+
+  <div class="pager"><a href="#queryapi">← 08 · Query API</a><a href="#fraud">Susunod: 10 · Fraud Scoring →</a></div>
+</section>
+
+<!-- ================================================================ -->
+<section id="fraud">
+  <div class="step-head"><span class="big-num">10</span><h2>Fraud Scoring — ang huling piraso</h2><span class="sp-badge">SP6 · Fraud</span></div>
+  <p class="step-goal">Hindi lahat ng click ay tao. Sa huling sub-project, magdadagdag tayo ng dalawang murang <em>sync</em> na signal sa redirect, isang pang-apat na consumer na nagbibigay ng hatol (verdict) kada click, at ikakabit ang mga hatol sa upuang inihanda ng Hakbang 09 — ang <code>excludedCids</code> ng reconciliation.</p>
+
+  <div class="why"><span class="label">Bakit kailangang hatiin: sync na signal, async na hatol</span>
+  <p>Ang IP address at ang mga header na <code>User-Agent</code>/<code>Purpose</code> ay umiiral <strong>sa HTTP request lamang</strong> — hindi sila kailanman isinama sa <code>ClickEventSchema</code> o sa Kinesis payload. Kaya ang isang purong-async na consumer ay <em>walang mapagkukunan</em> ng velocity o bot signal. Ang tamang hati: kompyutin ang mga signal kung nasaan ang mga header (sa redirect, <em>pagkatapos</em> maipadala ang 302 — walang bagong latency sa tao), isakay sila sa stream bilang <strong>enrichment</strong>, at hayaang basahin na lamang ng async na scorer ang mga flag na iyon.</p></div>
+
+  <h3>10.1 · <code>@app/fraud-signals</code> — dalawang murang tseke</h3>
+  <p><strong>Una: preview bots.</strong> Kapag nag-paste ka ng link sa Slack o iMessage, "pinipindot" ng messenger ang link para gumawa ng preview — hindi iyon click ng tao. Mabait ang mga bot na ito: nagpapakilala sila sa <code>User-Agent</code> o sa <code>Purpose: prefetch</code> na header:</p>
+
+  <figure class="code" data-src="packages/fraud-signals/src/previewBot.ts"><figcaption><span>packages/fraud-signals/src/previewBot.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>const PREVIEW_BOT_USER_AGENT_PATTERNS = [
+  /Slackbot/i,
+  /facebookexternalhit/i,
+  /Twitterbot/i,
+  /Discordbot/i,
+  /WhatsApp/i,
+  /iMessage/i,
+];
+
+export function isPreviewBotRequest(headers: { purpose?: string; userAgent?: string }): boolean {
+  if (headers.purpose?.toLowerCase() === 'prefetch') return true;
+  if (headers.userAgent &amp;&amp; PREVIEW_BOT_USER_AGENT_PATTERNS.some((pattern) =&gt; pattern.test(headers.userAgent!))) {
+    return true;
+  }
+  return false;
+}</code></pre></figure>
+
+  <p><strong>Pangalawa: velocity.</strong> Ang isang IP na pumipindot nang 20+ beses kada minuto ay hindi kumikilos na parang tao. Fixed window sa Redis — <code>INCR</code> tapos <code>EXPIRE</code> na itinatakda <em>sa unang increment lamang</em> ng bawat window:</p>
+
+  <figure class="code" data-src="packages/fraud-signals/src/velocity.ts"><figcaption><span>packages/fraud-signals/src/velocity.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>// Structural interface instead of node-redis's RedisClientType — the generic
+// defaults make nominally identical client types mutually unassignable across
+// package boundaries (same fix as @app/click-dedup's DedupRedis).
+export interface VelocityRedis {
+  incr(key: string): Promise&lt;number&gt;;
+  expire(key: string, seconds: number): Promise&lt;boolean | number&gt;;
+}
+
+export interface VelocityChecker {
+  checkAndIncrement(ip: string): Promise&lt;boolean&gt;;
+}
+
+export function createVelocityChecker(
+  redis: VelocityRedis,
+  options: { windowSeconds?: number; threshold?: number } = {}
+): VelocityChecker {
+  const windowSeconds = options.windowSeconds ?? 60;
+  const threshold = options.threshold ?? 20;
+
+  return {
+    async checkAndIncrement(ip) {
+      const key = `velocity:${ip}`;
+      const count = await redis.incr(key);
+      if (count === 1) {
+        await redis.expire(key, windowSeconds);
+      }
+      return count &gt; threshold;
+    },
+  };
+}</code></pre></figure>
+
+  <p>Ang <code>20/minuto</code> ay hayagang arbitraryong panimula — walang itinakda ang disenyo sa papel, at "magaspang" ang amin nitong pagkakatawag. Ang mahalaga ay <em>nasusukat at napapalitan</em> ang threshold, hindi kung tama ito sa unang hulà.</p>
+
+  <h3>10.2 · Retrofit sa publisher — enrichment na hindi nakakabasag</h3>
+  <p>Ang enrichment ay isang <strong>opsyonal na pangatlong argumento na default na <code>{}</code></strong> — kaya ang <code>batch-ingest</code> ay hindi kailangang galawin, at tanging ang redirect ang magpapasa nito:</p>
+
+  <figure class="code" data-src="packages/kinesis-publisher/src/index.ts"><figcaption><span>packages/kinesis-publisher/src/index.ts — pinal</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import { KinesisClient, PutRecordCommand } from '@aws-sdk/client-kinesis';
+import type { ClickEvent } from '@app/event-schema';
+
+export const CLICK_STREAM_NAME = 'ad-clicks-raw';
+
+export async function publishClickEvent(
+  client: KinesisClient,
+  streamName: string,
+  event: ClickEvent,
+<span class="add">  enrichment: { velocityFlag?: boolean; previewBot?: boolean } = {}</span>
+): Promise&lt;void&gt; {
+  await client.send(new PutRecordCommand({
+    StreamName: streamName,
+    PartitionKey: `${event.ad_id}#${Math.floor(Math.random() * 8)}`,
+<span class="add">    Data: Buffer.from(JSON.stringify({ ...event, ...enrichment, receivedAt: Date.now() })),</span>
+  }));
+}</code></pre></figure>
+
+  <div class="warn"><span class="label">Kuwento mula sa trenches: ang test na alam naming mababasag</span>
+  <p>Nang maging dalawang argumento ang <code>publish</code>, nabasag ang lumang assertion ng SP2 na <code>expect(publish).toHaveBeenCalledWith(event)</code> — ang <code>toHaveBeenCalledWith</code> ng Vitest ay tumutugma sa <em>buong</em> listahan ng argumento, hindi prefix. Nakita ito ng plano <em>bago</em> pa isulat ang code, at inayos ang test (dagdag na <code>expect.any(Object)</code> o ang tiyak na enrichment) sa halip na hayaang pumula. Ang aral: kapag binago mo ang isang kontrata, ang mga apektadong test ay bahagi ng trabaho, hindi sorpresa.</p></div>
+
+  <h3>10.3 · Retrofit sa redirect — narito na ang pinal na anyo</h3>
+  <p>Apat ang nagbago sa <code>app.ts</code> ng Hakbang 06: (1) bagong import mula <code>@app/fraud-signals</code>; (2) may <code>velocityChecker</code> na sa deps at dalawang argumento na ang <code>publish</code>; (3) kino-compute ang <code>previewBot</code> mula sa mga header <em>pagkatapos</em> ng redirect; (4) sa loob ng <code>setImmediate</code>, tinatawag ang velocity check saka nagpapasa ng enrichment. Naka-highlight ang mga bagong bahagi:</p>
+
+  <figure class="code" data-src="services/click-redirect/src/app.ts"><figcaption><span>services/click-redirect/src/app.ts — pinal</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import Fastify, { type FastifyInstance } from 'fastify';
+import { ClickEventSchema, type ClickEvent } from '@app/event-schema';
+import { verifySignature } from '@app/click-signature';
+<span class="add">import { isPreviewBotRequest, type VelocityChecker } from '@app/fraud-signals';</span>
+import type { AdDirectoryEntry } from '@app/db';
+
+<span class="add">export interface ClickEnrichment {
+  velocityFlag: boolean;
+  previewBot: boolean;
+}</span>
+
+export interface ClickRedirectDeps {
+  directoryCache: { lookup(adId: string): AdDirectoryEntry | undefined };
+<span class="add">  velocityChecker: Pick&lt;VelocityChecker, 'checkAndIncrement'&gt;;</span>
+<span class="add">  publish: (event: ClickEvent, enrichment: ClickEnrichment) =&gt; Promise&lt;void&gt;;</span>
+}
+
+export function buildApp(deps: ClickRedirectDeps): FastifyInstance {
+  const app = Fastify({ logger: true });
+
+  app.get('/click', async (req, reply) =&gt; {
+    const query = req.query as Record&lt;string, unknown&gt;;
+    const parsed = ClickEventSchema.safeParse(query);
+    const rawR = typeof query.r === 'string' ? query.r : undefined;
+
+    if (!parsed.success || !rawR) {
+      return reply.code(400).send({ error: 'invalid_request' });
+    }
+
+    const event = parsed.data;
+    const entry = deps.directoryCache.lookup(event.ad_id);
+    if (!entry) {
+      req.log.warn({ adId: event.ad_id }, 'unknown ad_id');
+      return reply.code(400).send({ error: 'invalid_request' });
+    }
+
+    if (!verifySignature(entry.signingSecret, event, event.sig)) {
+      req.log.warn({ cid: event.cid }, 'signature verification failed');
+      return reply.code(400).send({ error: 'invalid_request' });
+    }
+
+    let decodedR: string;
+    try {
+      decodedR = decodeURIComponent(rawR);
+    } catch {
+      return reply.code(400).send({ error: 'invalid_request' });
+    }
+
+    if (decodedR !== entry.landingUrl) {
+      req.log.warn({ cid: event.cid }, 'landing url mismatch');
+      return reply.code(400).send({ error: 'invalid_request' });
+    }
+
+    reply.redirect(entry.landingUrl, 302);
+
+<span class="add">    const previewBot = isPreviewBotRequest({
+      purpose: (req.headers['purpose'] ?? req.headers['sec-purpose']) as string | undefined,
+      userAgent: req.headers['user-agent'],
+    });
+
+    setImmediate(async () =&gt; {
+      try {
+        const velocityFlag = await deps.velocityChecker.checkAndIncrement(req.ip);
+        await deps.publish(event, { velocityFlag, previewBot });
+      } catch (err) {
+        req.log.error({ err, cid: event.cid }, 'click enqueue failed');
+      }
+    });</span>
+  });
+
+  return app;
+}</code></pre></figure>
+
+  <p>Nasa <em>ilalim</em> pa rin ng <code>reply.redirect(...)</code> ang lahat ng bago — ang Redis round-trip ng velocity check ay kaparehong klase ng latency ng dedup fast-path na dati nang tinatanggap ng hot path, at lalong hindi na ito hinihintay ng user. Sa <code>server.ts</code>, ito ang unang pagkakataong nagkaroon ng Redis dependency ang redirect:</p>
+
+  <figure class="code" data-src="services/click-redirect/src/server.ts"><figcaption><span>services/click-redirect/src/server.ts — pinal</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import { KinesisClient } from '@aws-sdk/client-kinesis';
+<span class="add">import { createClient as createRedisClient } from 'redis';</span>
+import { prisma, listActiveAdDirectory } from '@app/db';
+import { createDirectoryCache } from '@app/directory-cache';
+import { publishClickEvent, CLICK_STREAM_NAME } from '@app/kinesis-publisher';
+<span class="add">import { createVelocityChecker } from '@app/fraud-signals';</span>
+import { loadEnv } from '@app/config';
+import { buildApp } from './app.js';
+
+const env = loadEnv();
+const kinesis = new KinesisClient({
+  region: env.AWS_REGION,
+  endpoint: env.AWS_ENDPOINT_URL,
+  // ponytail: LocalStack dummy creds; swap for the default AWS credential provider chain when targeting real AWS
+  credentials: { accessKeyId: 'test', secretAccessKey: 'test' },
+});
+<span class="add">const redis = createRedisClient({ url: env.REDIS_URL });
+await redis.connect();</span>
+
+const directoryCache = createDirectoryCache(() =&gt; listActiveAdDirectory(prisma));
+await directoryCache.start();
+<span class="add">const velocityChecker = createVelocityChecker(redis);</span>
+
+const app = buildApp({
+  directoryCache,
+<span class="add">  velocityChecker,</span>
+  publish: (event, enrichment) =&gt; publishClickEvent(kinesis, CLICK_STREAM_NAME, event, enrichment),
+});
+
+await app.listen({ port: Number(process.env.PORT ?? 3000), host: '0.0.0.0' });</code></pre></figure>
+
+  <h3>10.4 · Ang <code>fraud-verdicts</code> table at ang hatol</h3>
+  <p>Isa pang ensure sa <code>tables.ts</code>: ang <code>fraud-verdicts</code>, na may PK na <code>date</code> at SK na <code>cid</code>. <strong>Bakit <code>date</code> ang partition key at hindi <code>cid</code> lang?</strong> Dahil ang tanong ng reconciliation ay "lahat ng masamang cid <em>sa araw na ito</em>" — sa date-keyed na table, iyan ay isang murang <code>Query</code>; sa cid-keyed, iyan ay isang buong-table na <code>Scan</code>. Ang hugis ng table ay laging sumusunod sa hugis ng tanong.</p>
+
+  <p>Ngayong kumpleto na ang mga resource, ito na ang pinal na <code>bootstrap.ts</code> na ipinangako ko sa Hakbang 04:</p>
+
+  <figure class="code" data-src="infra/localstack/src/bootstrap.ts"><figcaption><span>infra/localstack/src/bootstrap.ts — pinal</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import {
+  KinesisClient,
+  CreateStreamCommand,
+  DescribeStreamSummaryCommand,
+  ResourceInUseException,
+  ResourceNotFoundException,
+  waitUntilStreamExists,
+} from '@aws-sdk/client-kinesis';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { S3Client } from '@aws-sdk/client-s3';
+import { ensureDedupTable, ensureHotAggregateTable, ensureStatementsTable, ensureFraudVerdictsTable } from './tables.js';
+import { ensureRawArchiveBucket } from './buckets.js';
+
+const STREAM_NAME = 'ad-clicks-raw';
+const SHARD_COUNT = 2;
+
+export async function ensureClickStream(client: KinesisClient): Promise&lt;void&gt; {
+  if (!(await streamExists(client))) {
+    try {
+      await client.send(new CreateStreamCommand({ StreamName: STREAM_NAME, ShardCount: SHARD_COUNT }));
+    } catch (err) {
+      if (!(err instanceof ResourceInUseException)) throw err;
+    }
+  }
+
+  await waitUntilStreamExists({ client, maxWaitTime: 30, minDelay: 1 }, { StreamName: STREAM_NAME });
+}
+
+async function streamExists(client: KinesisClient): Promise&lt;boolean&gt; {
+  try {
+    await client.send(new DescribeStreamSummaryCommand({ StreamName: STREAM_NAME }));
+    return true;
+  } catch (err) {
+    if (err instanceof ResourceNotFoundException) return false;
+    throw err;
+  }
+}
+
+async function main() {
+  const kinesisClient = new KinesisClient({
+    region: process.env.AWS_REGION ?? 'us-east-1',
+    endpoint: process.env.AWS_ENDPOINT_URL ?? 'http://localhost:4566',
+    credentials: { accessKeyId: 'test', secretAccessKey: 'test' },
+  });
+  await ensureClickStream(kinesisClient);
+
+  const dynamoClient = new DynamoDBClient({
+    region: process.env.AWS_REGION ?? 'us-east-1',
+    endpoint: process.env.AWS_ENDPOINT_URL ?? 'http://localhost:4566',
+    credentials: { accessKeyId: 'test', secretAccessKey: 'test' },
+  });
+  await ensureDedupTable(dynamoClient);
+  await ensureHotAggregateTable(dynamoClient);
+  await ensureStatementsTable(dynamoClient);
+  await ensureFraudVerdictsTable(dynamoClient);
+
+  const s3Client = new S3Client({
+    region: process.env.AWS_REGION ?? 'us-east-1',
+    endpoint: process.env.AWS_ENDPOINT_URL ?? 'http://localhost:4566',
+    credentials: { accessKeyId: 'test', secretAccessKey: 'test' },
+    forcePathStyle: true,
+  });
+  await ensureRawArchiveBucket(s3Client);
+
+  console.log('LocalStack resources ready: Kinesis stream, dedup table, hot aggregate table, statements table, raw archive bucket, fraud verdicts table.');
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((err) =&gt; {
+    console.error(err);
+    process.exit(1);
+  });
+}</code></pre></figure>
+
+  <p>Ang <code>@app/fraud-verdict-store</code> — ang patakaran ng paghatol at ang imbakan nito:</p>
+
+  <figure class="code" data-src="packages/fraud-verdict-store/src/verdict.ts"><figcaption><span>packages/fraud-verdict-store/src/verdict.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>export type Verdict = 'legitimate' | 'suspicious' | 'invalid';
+
+export function scoreVerdict(enrichment: { velocityFlag?: boolean; previewBot?: boolean }): Verdict {
+  if (enrichment.previewBot) return 'invalid';
+  if (enrichment.velocityFlag) return 'suspicious';
+  return 'legitimate';
+}</code></pre></figure>
+
+  <figure class="code" data-src="packages/fraud-verdict-store/src/store.ts"><figcaption><span>packages/fraud-verdict-store/src/store.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import { DynamoDBClient, PutItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
+import type { Verdict } from './verdict.js';
+
+const FRAUD_VERDICTS_TABLE_NAME = 'fraud-verdicts';
+
+export async function putVerdict(
+  dynamo: DynamoDBClient,
+  params: { date: string; cid: string; verdict: Verdict }
+): Promise&lt;void&gt; {
+  await dynamo.send(new PutItemCommand({
+    TableName: FRAUD_VERDICTS_TABLE_NAME,
+    Item: {
+      date: { S: params.date },
+      cid: { S: params.cid },
+      verdict: { S: params.verdict },
+    },
+  }));
+}
+
+export async function listExcludedCids(dynamo: DynamoDBClient, date: string): Promise&lt;Set&lt;string&gt;&gt; {
+  const { Items } = await dynamo.send(new QueryCommand({
+    TableName: FRAUD_VERDICTS_TABLE_NAME,
+    KeyConditionExpression: '#d = :date',
+    ExpressionAttributeNames: { '#d': 'date' },
+    ExpressionAttributeValues: { ':date': { S: date } },
+  }));
+
+  const excluded = new Set&lt;string&gt;();
+  for (const item of Items ?? []) {
+    if (item.verdict?.S !== 'legitimate') excluded.add(item.cid.S!);
+  }
+  return excluded;
+}</code></pre></figure>
+
+  <div class="why"><span class="label">Dalawang desisyon sa patakaran ng hatol</span>
+  <ul>
+    <li><strong>Nananalo ang <code>previewBot</code> sa <code>velocityFlag</code>.</strong> Ang kilalang bot user-agent ay pinakamalapit sa "kumpirmado" na kayang abutin ng rule-based na tseke — <code>invalid</code> agad; ang velocity ay pahiwatig lamang — <code>suspicious</code>.</li>
+    <li><strong>Parehong ibinubukod ang <code>suspicious</code> at <code>invalid</code> sa billing.</strong> Ang balangkas ng disenyo ay "ang suspicious ay nakabinbin hanggang ma-review; ibubukod kung hindi naresolba pagsapit ng closing" — pero walang review mechanism ang pipeline na ito, kaya <em>lahat</em> ng suspicious ay "hindi naresolba" sa konstruksyon pa lang. Ang blanket exclusion ang konserbatibong bunga — mas mabuting hindi masingil ang kahina-hinala kaysa masingil ang bot. (Pansinin din ang <code>#d</code> alias: ang <code>date</code> ay reserved word sa DynamoDB, tulad ng <code>count</code> sa Hakbang 07.)</li>
+  </ul></div>
+
+  <h3>10.5 · <code>services/fraud-scorer</code> — ang pang-apat na consumer</h3>
+  <p>Salamat sa shared loop ng Hakbang 07, ang buong serbisyo ay halos pagdudugtong na lamang:</p>
+
+  <figure class="code" data-src="services/fraud-scorer/src/run.ts"><figcaption><span>services/fraud-scorer/src/run.ts</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import { KinesisClient } from '@aws-sdk/client-kinesis';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { runPollingConsumer } from '@app/kinesis-consumer-loop';
+import { scoreVerdict, putVerdict } from '@app/fraud-verdict-store';
+import { loadEnv } from '@app/config';
+
+interface EnrichedRecord {
+  cid: string;
+  velocityFlag?: boolean;
+  previewBot?: boolean;
+}
+
+// Must match the archiver's partition-date computation so reconciliation
+// looks up verdicts under the same "today".
+function todayDateString(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function main() {
+  const env = loadEnv();
+  const shardId = process.env.KINESIS_SHARD_ID;
+  if (!shardId) throw new Error('KINESIS_SHARD_ID is required');
+
+  const awsClientConfig = {
+    region: env.AWS_REGION,
+    endpoint: env.AWS_ENDPOINT_URL,
+    // ponytail: LocalStack dummy creds; swap for the default AWS credential provider chain when targeting real AWS
+    credentials: { accessKeyId: 'test', secretAccessKey: 'test' },
+  };
+  const kinesis = new KinesisClient(awsClientConfig);
+  const dynamo = new DynamoDBClient(awsClientConfig);
+
+  await runPollingConsumer({
+    kinesis,
+    streamName: 'ad-clicks-raw',
+    shardId,
+    onRecord: async (data) =&gt; {
+      const event = JSON.parse(data.toString('utf-8')) as EnrichedRecord;
+      const verdict = scoreVerdict(event);
+      await putVerdict(dynamo, { date: todayDateString(), cid: event.cid, verdict });
+    },
+  });
+}
+
+main().catch((err) =&gt; {
+  console.error(err);
+  process.exit(1);
+});</code></pre></figure>
+
+  <ul>
+    <li><strong>Sinadyang HINDI kumukunsulta sa dedup ang scorer.</strong> Ang duplicate na paghahatid ng isang mapanlokong click ay <em>ebidensya pa rin</em> tungkol sa <code>cid</code> na iyon, at ang muling paghatol sa parehong input ay idempotent naman — walang poprotektahan ang dedup dito.</li>
+    <li><strong>Ang petsa ng hatol ay "ngayon" sa oras ng paghatol</strong>, na tumutugma sa partition date ng archiver para sa sariwang mga click. Kilalang kisame: ang event na sobrang tagal bago dumating (lampas hatinggabi) ay maaaring mahatulan sa ibang petsa kaysa sa kinalagyan ng archive nito — tinatanggap na limitasyon ng rule-based na yugtong ito, nakatala sa mismong komento ng code.</li>
+  </ul>
+
+  <h3>10.6 · Ikabit ang hatol sa pera</h3>
+  <p>Ang kasukdulan ng anim na sub-project ay isang <em>maliit na diff</em>: sa <code>server.ts</code> ng billing API, palitan ang walang-lamang set ng tunay na <code>listExcludedCids</code>. Walang ibang gumagalaw — iyan ang gantimpala ng seam na inihanda sa Hakbang 09:</p>
+
+  <figure class="code" data-src="services/billing-api/src/server.ts"><figcaption><span>services/billing-api/src/server.ts — pinal</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { prisma, getCampaignOwnerAdvertiserId, resolveApiKey } from '@app/db';
+import { getStatement, putStatement } from '@app/statements-store';
+import { createArchiveDb, reconcileDate, bucketPrefixForDate } from '@app/parquet-archive';
+<span class="add">import { listExcludedCids } from '@app/fraud-verdict-store';</span>
+import { loadEnv } from '@app/config';
+import { buildApp } from './app.js';
+import { reconcileAndStore } from './reconciliation.js';
+
+const env = loadEnv();
+const opsToken = process.env.OPS_TOKEN;
+if (!opsToken) throw new Error('OPS_TOKEN is required');
+
+const dynamo = new DynamoDBClient({
+  region: env.AWS_REGION,
+  endpoint: env.AWS_ENDPOINT_URL,
+  // ponytail: LocalStack dummy creds; swap for the default AWS credential provider chain when targeting real AWS
+  credentials: { accessKeyId: 'test', secretAccessKey: 'test' },
+});
+const archiveDb = await createArchiveDb(env);
+
+const app = buildApp({
+  opsToken,
+  resolveApiKey: (rawKey) =&gt; resolveApiKey(prisma, rawKey),
+  getCampaignOwner: (campaignId) =&gt; getCampaignOwnerAdvertiserId(prisma, campaignId),
+  getStatement: (campaignId, period) =&gt; getStatement(dynamo, campaignId, period),
+  reconcileAndStore: (date) =&gt; reconcileAndStore({
+    bucketPrefixForDate,
+<span class="add">    listExcludedCids: (d) =&gt; listExcludedCids(dynamo, d),</span>
+    reconcileDate: (prefix, excludedCids) =&gt; reconcileDate(archiveDb, prefix, excludedCids),
+    putStatement: (statement) =&gt; putStatement(dynamo, statement),
+  }, date),
+});
+
+await app.listen({ port: Number(process.env.PORT ?? 3003), host: '0.0.0.0' });</code></pre></figure>
+
+  <div class="note"><span class="label">Tandaan: ang mga sinadyang HINDI ginawa</span>
+  <p>Tatlong bagay ang tahasang wala, at bawat isa'y desisyon, hindi kalimot: <strong>device fingerprinting</strong> (client-side SDK ang kailangan; IP lamang ang velocity natin), ang <strong>landing-page beacon</strong> (buong bagong public endpoint at kontrata sa client — mas malaki kaysa magbasa ng dalawang header), at ang <strong>review workflow ng suspicious</strong> (patakaran ng negosyo iyan; ang pipeline ay nagbibigay ng datos nang mabilis, hindi nagpapasya para sa trust-and-safety). Nakatala lahat sa spec bilang mga tunay na puwang — hindi sila "nakalimutan".</p></div>
+
+  <div class="checkpoint"><span class="label">Subukan natin — magpanggap na bot</span>
+  <p>Patakbuhin ang fraud-scorer sa dalawang shard (dalawang bagong terminal, may .env), at siguraduhing muling na-bootstrap ang infra:</p>
+  <figure class="code"><figcaption><span>mga bagong terminal</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>pnpm --filter @app/infra-localstack bootstrap    <span class="c"># idagdag ang fraud-verdicts table</span>
+KINESIS_SHARD_ID=shardId-000000000000 pnpm --filter @app/fraud-scorer start
+KINESIS_SHARD_ID=shardId-000000000001 pnpm --filter @app/fraud-scorer start</code></pre></figure>
+  <figure class="code"><figcaption><span>terminal ng tester</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code><span class="c"># Gumawa ng SARIWANG signed URL (Hakbang 06), tapos i-click bilang Slackbot:</span>
+curl -s -o /dev/null -A "Slackbot 1.0" "&lt;ANG_BAGONG_URL&gt;"
+<span class="c"># 302 pa rin ang bot — hindi natin siya hinaharangan, minamarkahan lang.</span>
+
+<span class="c"># Sa loob ng ilang segundo, may hatol na:</span>
+docker compose exec localstack awslocal dynamodb scan \
+  --table-name fraud-verdicts --max-items 5
+<span class="c"># → item na may verdict: "invalid" para sa cid na iyon</span>
+
+<span class="c"># Patakbuhin muli ang reconciliation, tapos basahin ang statement:</span>
+curl -s -X POST -H "X-Ops-Token: dev-ops-token" \
+  http://localhost:3003/v1/reconciliation/$(date -u +%F)/rerun
+curl -s -H "Authorization: Bearer &lt;ANG_SEED_API_KEY_MO&gt;" \
+  http://localhost:3003/v1/campaigns/seed-campaign-1/statement
+<span class="c"># → tumaas ang "excludedInvalidClicks" ng 1 — nabilang ang bot,
+#   pero HINDI sisingilin. Iyan ang buong punto ng anim na sub-project.</span></code></pre></figure></div>
+
+  <div class="pager"><a href="#exactlane">← 09 · Exact Lane</a><a href="#e2e">Susunod: 11 · End-to-End Run →</a></div>
+</section>
+
+<!-- ================================================================ -->
+<section id="e2e">
+  <div class="step-head"><span class="big-num">11</span><h2>End-to-End Run — isang pindot, isang linya sa invoice</h2></div>
+  <p class="step-goal">Kumpleto na ang sistema. Ngayon patakbuhin natin ang <em>lahat</em> nang sabay-sabay at sundan ang isang tunay na click mula sa <code>302</code> hanggang sa singil — at pagkatapos, subukan nating basagin ito sa tatlong paraan.</p>
+
+  <h3>11.1 · Ang malamig na pagsisimula</h3>
+  <p>Mula sa malinis na makina, ito ang buong pagkakasunod-sunod. Idinaan na natin ang bawat hakbang; narito ang kumpletong listahan sa isang lugar:</p>
+
+  <figure class="code"><figcaption><span>terminal — buong bootstrap</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code><span class="c"># 1. Ang container runtime at ang mga database</span>
+colima start
+cp .env.example .env            <span class="c"># unang beses lamang</span>
+docker compose up -d
+docker compose ps               <span class="c"># ulitin hanggang "healthy" ang tatlo (~30s)</span>
+
+<span class="c"># 2. Install at build</span>
+pnpm install                    <span class="c"># kasama na ang prisma generate (postinstall)</span>
+pnpm -r build                   <span class="c"># KAILANGAN bago patakbuhin ang mga serbisyo</span>
+
+<span class="c"># 3. Ang mga lokal na AWS resource (idempotent)</span>
+pnpm --filter @app/infra-localstack bootstrap
+
+<span class="c"># 4. Schema at demo data</span>
+DATABASE_URL=postgresql://app:app@localhost:5432/app \
+  pnpm --filter @app/db exec prisma migrate deploy
+DATABASE_URL=postgresql://app:app@localhost:5432/app \
+  pnpm --filter @app/db seed
+<span class="c"># → itago ang API key na ipi-print!</span>
+
+<span class="c"># 5. Patunayan — buong test suite (85 tests, unit + integration)</span>
+DATABASE_URL=postgresql://app:app@localhost:5432/app pnpm -r test</code></pre></figure>
+
+  <h3>11.2 · Ang sampung proseso</h3>
+  <p>Ang bawat matagalang proseso ay may sariling terminal, at <strong>bawat terminal ay may environment</strong> — patakbuhin muna ang <code>set -a; source .env; set +a</code> sa bago-bagong terminal:</p>
+
+  <div class="tablewrap"><table>
+    <tr><th>#</th><th>Utos</th><th>Ano ito</th></tr>
+    <tr><td>T1</td><td><code>KINESIS_SHARD_ID=shardId-000000000000 pnpm --filter @app/aggregator start</code></td><td>Fast lane, shard 0</td></tr>
+    <tr><td>T2</td><td><code>KINESIS_SHARD_ID=shardId-000000000001 pnpm --filter @app/aggregator start</code></td><td>Fast lane, shard 1</td></tr>
+    <tr><td>T3</td><td><code>KINESIS_SHARD_ID=shardId-000000000000 pnpm --filter @app/archiver start</code></td><td>Exact lane, shard 0</td></tr>
+    <tr><td>T4</td><td><code>KINESIS_SHARD_ID=shardId-000000000001 pnpm --filter @app/archiver start</code></td><td>Exact lane, shard 1</td></tr>
+    <tr><td>T5</td><td><code>KINESIS_SHARD_ID=shardId-000000000000 pnpm --filter @app/fraud-scorer start</code></td><td>Fraud, shard 0</td></tr>
+    <tr><td>T6</td><td><code>KINESIS_SHARD_ID=shardId-000000000001 pnpm --filter @app/fraud-scorer start</code></td><td>Fraud, shard 1</td></tr>
+    <tr><td>T7</td><td><code>pnpm --filter @app/click-redirect start</code></td><td>Ang redirect (:3000)</td></tr>
+    <tr><td>T8</td><td><code>pnpm --filter @app/query-api start</code></td><td>Dashboard read (:3002)</td></tr>
+    <tr><td>T9</td><td><code>OPS_TOKEN=dev-ops-token pnpm --filter @app/billing-api start</code></td><td>Billing (:3003)</td></tr>
+    <tr><td>T10</td><td><em>(iyong terminal na pantester)</em></td><td>Dito tayo magpapaputok ng click</td></tr>
+  </table></div>
+
+  <div class="note"><span class="label">Bakit isang proseso kada shard</span>
+  <p>Sa Kinesis, ang parallelism <em>ay</em> ang shards: isang consumer process, isang shard. Nakakalat ang mga click sa dalawang shard nang pseudo-random (dahil sa salt ng Hakbang 06), kaya kung shard-0 lang ang may consumer, mga <strong>kalahati</strong> ng click mo ang hindi makikita. Kaya pares-pares ang T1–T6. Sa produksyon, ang orchestrator (hal. ECS) ang nagtatalaga ng shard kada container; nang lokal, ikaw ang orchestrator. Puwede mong laktawan ang T2/T4/T6 kung hindi ka magrereklamo sa paulit-ulit na pagpaputok hangga't hindi tumatama sa shard 0.</p></div>
+
+  <h3>11.3 · Ang paglalakbay ng isang click</h3>
+  <p>Sa T10 — gumawa ng may-pirmang URL (parehong forge script ng Hakbang 06), tapos sundan ang bawat antas:</p>
+
+  <figure class="code"><figcaption><span>T10 — hakbang-hakbang na pagmamatyag</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code><span class="c"># 0s — Ipaputok. Tingnan ang headers:</span>
+curl -i "&lt;ANG_URL&gt;"
+<span class="c"># → HTTP/1.1 302 Found, location: https://advertiser.example.com/landing
+#   WALA na ang user. Lahat ng sumusunod ay nangyari PAGKATAPOS ng redirect.</span>
+
+<span class="c"># ~agad — Alam na ni Redis ang cid mo (ang dedup ledger):</span>
+docker compose exec redis redis-cli keys 'click:clk_demo_*'
+
+<span class="c"># ~ilang segundo — May hatol na ang fraud scorer:</span>
+docker compose exec localstack awslocal dynamodb scan \
+  --table-name fraud-verdicts --max-items 5
+<span class="c"># → verdict: "legitimate" (tao ka naman)</span>
+
+<span class="c"># ~35s — Nasa S3 na ang raw event bilang Parquet:</span>
+docker compose exec localstack awslocal s3 ls s3://ad-clicks-raw/ --recursive
+<span class="c"># → dt=2026-…/part-….parquet</span>
+
+<span class="c"># 2–3 min — Dumating ang bilang sa DynamoDB (window + watermark):</span>
+docker compose exec localstack awslocal dynamodb scan \
+  --table-name click-aggregates --max-items 5
+
+<span class="c"># Ang numero ng dashboard (tantiya):</span>
+curl -s -H "Authorization: Bearer &lt;KEY&gt;" \
+  http://localhost:3002/v1/ads/seed-ad-1/aggregates
+<span class="c"># → {"adId":"seed-ad-1","windowStart":"…","clicks":1,"exact":false,"asOf":"…"}</span>
+
+<span class="c"># Ang numero ng invoice (eksakto) — reconcile muna, tapos basahin:</span>
+curl -s -X POST -H "X-Ops-Token: dev-ops-token" \
+  http://localhost:3003/v1/reconciliation/$(date -u +%F)/rerun
+curl -s -H "Authorization: Bearer &lt;KEY&gt;" \
+  http://localhost:3003/v1/campaigns/seed-campaign-1/statement
+<span class="c"># → {"campaignId":"seed-campaign-1","period":"…","billedClicks":1,
+#    "excludedInvalidClicks":0,"exact":true,…}</span></code></pre></figure>
+
+  <h3>11.4 · Tatlong pagtatangkang manlinlang (lahat bibigo)</h3>
+
+  <figure class="code"><figcaption><span>T10 — subukan nating basagin</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code><span class="c"># (1) DOBLE — i-replay ang EKSAKTONG parehong URL, limang beses pa:</span>
+for i in 1 2 3 4 5; do curl -s -o /dev/null "&lt;PAREHONG URL&gt;"; done
+<span class="c"># Na-redirect pa rin ang user kada beses (hinding-hindi puwedeng masira iyon),
+# pero HINDI umakyat ang bilang: sinabi ng Redis SET NX na "nakita ko na".
+# At sa exact lane: naka-archive lahat ng anim, pero COUNT(DISTINCT cid) = 1.
+# Muling patakbuhin ang reconciliation at tingnan — billedClicks: 1 pa rin.</span>
+
+<span class="c"># (2) PEKE — galawin ang isang pinirmahang field (palitan ang ad_id sa URL):</span>
+curl -s "&lt;URL_NA_MAY_MALING_ad_id&gt;"
+<span class="c"># → 400 {"error":"invalid_request"} — bumagsak ang HMAC.</span>
+
+<span class="c"># (3) NAKAW NA REDIRECT — ituro ang r sa ibang site:</span>
+curl -s "&lt;URL_NA_r_AY_evil.example.com&gt;"
+<span class="c"># → 400 din, IDENTIKAL na error body. Ang r ay dapat tumugma sa landingUrl
+#   na nakatago sa Postgres. Walang open redirect, at walang paraan para
+#   malaman ng umaatake kung aling pagtanggi ang tumama.</span></code></pre></figure>
+
+  <p>At ang paboritong sukatan ng tenant isolation:</p>
+  <figure class="code"><figcaption><span>T10 — hangganan ng tenant</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>curl -s -H "Authorization: Bearer &lt;KEY&gt;" \
+  http://localhost:3002/v1/ads/walang-ganitong-ad/aggregates
+curl -s -H "Authorization: Bearer &lt;KEY&gt;" \
+  http://localhost:3002/v1/ads/ad-ng-iba/aggregates
+<span class="c"># Byte-por-byte na magkaparehong 404 {"error":"not_found"}.
+# Hindi matutuklasan ng kakumpitensya kung aling ad id ang umiiral.</span></code></pre></figure>
+
+  <div class="checkpoint"><span class="label">Subukan natin — ang huling pagpapatunay</span>
+  <figure class="code"><figcaption><span>terminal</span><button type="button" class="copy-btn">Kopyahin</button></figcaption>
+<pre><code>DATABASE_URL=postgresql://app:app@localhost:5432/app pnpm -r test
+<span class="c"># 85 tests, lahat luntian. Kailangang bukas ang mga container para sa
+# integration tests; ang mga purong unit test (event-schema, click-signature,
+# windowed-aggregator, archiver core) ay tumatakbo nang walang infra.</span></code></pre></figure>
+  <p>Kung luntian ang lahat: <strong>tapos ka na</strong>. Isang pindot ay naging isang linya sa invoice — hindi zero, hindi dalawa — na may mabilis na tantiyang numero sa daan.</p></div>
+
+  <div class="pager"><a href="#fraud">← 10 · Fraud Scoring</a><a href="#retro">Susunod: 12 · Retro ng Senior →</a></div>
+</section>
+
+<!-- ================================================================ -->
+<section id="retro">
+  <div class="step-head"><span class="big-num">12</span><h2>Retro ng Senior — ano ang natutuhan natin</h2></div>
+  <p class="step-goal">Ang code ay tapos na; ang kaalaman ang dapat mo pang isama pag-alis. Narito ang mga pattern na paulit-ulit lumitaw, ang mga puwang na sinadya naming iwan, at ang mga bitag na hinintay kami.</p>
+
+  <h3>12.1 · Mga pattern na paulit-ulit</h3>
+  <div class="tablewrap"><table>
+    <tr><th>Pattern</th><th>Saan lumitaw</th><th>Bakit mahalaga</th></tr>
+    <tr><td><strong>Purong core, manipis na shell</strong></td><td><code>app.ts</code> vs <code>server.ts</code>; <code>core.ts</code> vs <code>poll.ts</code>/<code>run.ts</code></td><td>Lahat ng lohika ay nate-test nang walang infra; ang wiring lang ang hindi na-te-test — at wala rin namang lohika roon.</td></tr>
+    <tr><td><strong>Iisang error body kada klase ng pagtanggi</strong></td><td><code>400 invalid_request</code> (redirect); <code>404 not_found</code> (query, billing)</td><td>Ang magkaibang mensahe ay oracle para sa umaatake. Naka-log ang tunay na dahilan, hindi ibinabalik.</td></tr>
+    <tr><td><strong>Idempotent na lahat ng operasyon ng ops</strong></td><td>bootstrap, seed, reconciliation</td><td>"Sira, ulitin natin" ay laging ligtas na sagot — kalahati ng operational calm ay ito.</td></tr>
+    <tr><td><strong>Hayagang oras, hindi mocked na orasan</strong></td><td><code>peekClosedWindows(nowMs)</code>, <code>shouldFlush(nowMs)</code>, <code>add(item, nowMs?)</code></td><td>Ipinapasa ang oras bilang argumento — mabilis, deterministic, walang mahikang test framework.</td></tr>
+    <tr><td><strong>Maliit na structural na interface kaysa sa importadong type</strong></td><td><code>DedupRedis</code>, <code>VelocityRedis</code>, <code>Pick&lt;…&gt;</code> sa mga deps</td><td>Umiiwas sa generic hell ng node-redis at nagpapadali ng fake sa tests. Ideklara ang kailangan, hindi ang buong mundo.</td></tr>
+    <tr><td><strong>Seam bago ang tampalasan</strong></td><td><code>excludedCids</code> sa <code>reconcileDate</code> (SP5) na napunan ng SP6</td><td>Ang alam-nang-darating na feature ay binibigyan ng lugar, <em>walang</em> pag-iimbento ng abstraction na wala pang gumagamit.</td></tr>
+  </table></div>
+
+  <h3>12.2 · Ang mga trade-off, magkatabi</h3>
+  <div class="tablewrap"><table>
+    <tr><th>Desisyon</th><th>Ang napala</th><th>Ang binayad</th></tr>
+    <tr><td>Dalawang lane (fast + exact)</td><td>Dashboard sa segundo, invoice na mapapanindigan</td><td>Dalawang landas na inaalagaan; dalawang klase ng numerong dapat ipaliwanag sa gumagamit</td></tr>
+    <tr><td>Client-minted <code>cid</code></td><td>Posible ang exactly-once; ligtas ang retry</td><td>Nakasandal sa client na huwag mag-imbento ng bagong id kada attempt</td></tr>
+    <tr><td>Redis fast-path + DynamoDB backstop</td><td>Mikrosegundong dedup, buhay pa rin kapag nag-restart si Redis</td><td>Dalawang sistemang aalagaan; 10-minutong dedup window lang (sapat sa retry, hindi sa araw)</td></tr>
+    <tr><td>Hindi dinededup ang archive</td><td>Ligtas at nakakabagot ang replay; isang SQL query ang katumpakan</td><td>Mas malaking storage; ang katumpakan ay nakabitin sa iisang query na dapat tama</td></tr>
+    <tr><td>Polling kaysa enhanced fan-out</td><td>Na-te-test sa LocalStack; iisang code path sa lokal at totoong AWS</td><td>Ilang daang ms na dagdag na latency (walang halaga sa tabi ng 60s window)</td></tr>
+    <tr><td>Fire-and-forget na publish</td><td>Hinding-hindi napipigilan ang tao ng mabagal na Kinesis</td><td>Kapag bumagsak ang Kinesis lampas sa retry, nawawala ang click (naka-log)</td></tr>
+    <tr><td>Salted partition key</td><td>Walang hot shard kahit viral ang isang ad</td><td>Wala nang garantiyang pagkakasunod-sunod kada ad (hindi natin kailangan)</td></tr>
+  </table></div>
+
+  <h3>12.3 · Ang mga sinadyang puwang</h3>
+  <p>Sinasabi ko ito nang tuwiran dahil <em>malaking pagkakaiba</em> sa isang code review ang "hindi namin ito ginawa, at ito ang dahilan" kaysa sa katahimikan:</p>
+  <ul>
+    <li><strong>Manipis ang consumer resilience.</strong> Kapag nag-throttle ang Kinesis o nag-expire ang iterator, bumabagsak ang consumer at nagsisimula muli mula sa "ngayon" — nawawala ang mga in-memory window at buffer. Tanggap sa tantiyang lane; para sa exact lane, ang archive + reconciliation ang tagapagligtas. Ito ang <em>numero unong</em> hardening item.</li>
+    <li><strong>Walang durable outbox.</strong> Ang na-redirect pero hindi nai-publish na click ay tuluyang nawawala.</li>
+    <li><strong>Walang totoong cron.</strong> Ang reconciliation ay function na inilalabas sa manual rerun endpoint; ang scheduling ay usapin ng deployment.</li>
+    <li><strong>Walang IaC, walang deployment.</strong> Configuration change lang ang pagturo sa totoong AWS, pero ang productionizing (Terraform/CDK, checkpointing, autoscaling) ay sinadyang labas sa saklaw.</li>
+    <li><strong>Walang load test.</strong> Ang <code>p99 &lt;100ms</code> ay hangarin, hindi napatunayan — ang wall-clock assertion sa integration test ay likas na palpakin, kaya <em>pagkakasunod-sunod</em> ng tawag ang tine-test natin (publish pagkatapos ng redirect), hindi ang bilis. Dapat may load test bago ito tawaging production-ready.</li>
+    <li><strong>Magaspang ang fraud.</strong> IP-only velocity, header-based na bot detection, walang fingerprinting, walang landing beacon, walang review workflow para sa <code>suspicious</code>.</li>
+  </ul>
+
+  <h3>12.4 · Mga bitag na hinintay kami</h3>
+  <div class="tablewrap"><table>
+    <tr><th>Sintomas</th><th>Sanhi → lunas</th></tr>
+    <tr><td><code>docker: command not found</code> / <code>Cannot connect to the Docker daemon</code></td><td>Patay ang colima VM → <code>colima start</code></td></tr>
+    <tr><td>Palpak ang Postgres auth kahit tama ang password</td><td>Nakaupo ang Homebrew Postgres sa port 5432 → <code>brew services stop postgresql@17</code></td></tr>
+    <tr><td><code>Cannot find module '@app/…/dist/index.js'</code></td><td>Hindi pa naka-compile ang workspace packages → <code>pnpm -r build</code></td></tr>
+    <tr><td><code>@prisma/client did not initialize yet</code></td><td>Walang generated client → <code>pnpm install</code> (may postinstall) o <code>pnpm --filter @app/db generate</code></td></tr>
+    <tr><td><code>Environment variable not found: DATABASE_URL</code></td><td>Hindi nagbabasa ng <code>.env</code> ang Prisma runtime → i-prefix, o <code>set -a; source .env; set +a</code></td></tr>
+    <tr><td>Bumabagsak ang integration tests sa connection error</td><td>Patay o hindi pa healthy ang containers → <code>docker compose ps</code>; ang LocalStack ang pinakahuling maging healthy</td></tr>
+    <tr><td>Namamatay agad ang consumer: <code>KINESIS_SHARD_ID is required</code></td><td>Kailangang sabihan ng shard → <code>KINESIS_SHARD_ID=shardId-000000000000</code> (o …001)</td></tr>
+    <tr><td>Nagpaputok ng click pero <code>clicks: 0</code> pa rin</td><td>Isa sa tatlo: (a) nasa loob ka pa ng 2–3 min na window+watermark — maghintay; (b) tumama ang click sa shard na walang consumer — patakbuhin ang pareho; (c) ginamit mo muli ang <code>cid</code> — gumagana ang dedup ayon sa disenyo</td></tr>
+    <tr><td>Namamatay agad ang billing-api</td><td><code>OPS_TOKEN is required</code> → <code>OPS_TOKEN=dev-ops-token pnpm --filter @app/billing-api start</code></td></tr>
+    <tr><td>Gusto ng malinis na simula</td><td><code>docker compose down -v &amp;&amp; docker compose up -d</code>, tapos bootstrap → migrate → seed (sinadyang disposable ang containers)</td></tr>
+  </table></div>
+
+  <h3>12.5 · Kung ipagpapatuloy mo ito</h3>
+  <p>Ayon sa ranggo ng aktwal na halaga, hindi ng kislap:</p>
+  <ol>
+    <li><strong>Kinesis checkpointing</strong> (isang lease table sa DynamoDB) para hindi na mawala ang posisyon ng consumer sa restart. Ito ang tunay na butas.</li>
+    <li><strong>Durable outbox</strong> para sa publish sa hot path — para tuluyang mapawi ang "na-redirect pero hindi nabilang".</li>
+    <li><strong>Load test</strong> laban sa <code>p99 &lt;100ms</code> na hangarin, tapos gawing scheduled job ang reconciliation.</li>
+    <li><strong>Review workflow</strong> para sa <code>suspicious</code> na hatol, para hindi na blanket exclusion ang patakaran.</li>
+    <li><strong>Historical windows</strong> sa query API (<code>?window=</code>) kapag may humingi na — <em>hindi bago</em> may humingi.</li>
+  </ol>
+
+  <div class="why"><span class="label">Ang huling aral</span>
+  <p>Tingnan muli ang huling diff ng Hakbang 10.6: <strong>isang linya</strong> ang nagdugtong ng buong fraud subsystem sa billing. Hindi iyon suwerte — resulta iyon ng isang desisyon na ginawa isang sub-project bago pa: ang paglalagay ng <code>excludedCids</code> na parameter na tumatanggap ng walang-lamang set. Iyan ang pinakamahalagang kasanayan sa gabay na ito: <em>maghanda ng upuan para sa alam-mong-darating, huwag magtayo ng bahay para sa hindi mo pa kilala.</em> Ang unang klase ng paghahanda ay disiplina; ang pangalawa ay ang pinagmumulan ng mga sistemang hindi na maintindihan ng kahit sino sa alas-tres ng madaling-araw.</p></div>
+
+  <div class="pager"><a href="#e2e">← 11 · End-to-End Run</a><span></span></div>
+</section>
+
+</main>
+</div>
+
+<footer>
+  <p>Bahagi ng magkakapatid na dokumento: <a href="index.html">index.html</a> (ang disenyo at mga numero) · <a href="guide.html">guide.html</a> (pagpapatakbo at pag-unawa, Ingles) · <strong>tutorial.html</strong> (ang gabay sa pagbuo, Tagalog). Ang rationale ng bawat sub-project ay nasa <code>docs/superpowers/specs/</code>, ang mga plano sa <code>docs/superpowers/plans/</code>.</p>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Tema: Auto / Maliwanag / Madilim ---------- */
+  var THEME_KEY = 'ad-click-tutorial-theme';
+  var root = document.documentElement;
+  var themeBtns = document.querySelectorAll('[data-theme-choice]');
+  function applyTheme(choice) {
+    if (choice === 'light' || choice === 'dark') root.setAttribute('data-theme', choice);
+    else root.removeAttribute('data-theme');
+    themeBtns.forEach(function (btn) {
+      btn.setAttribute('aria-pressed', String(btn.getAttribute('data-theme-choice') === choice));
+    });
+  }
+  var savedTheme = 'auto';
+  try { savedTheme = localStorage.getItem(THEME_KEY) || 'auto'; } catch (e) {}
+  applyTheme(savedTheme);
+  themeBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var choice = btn.getAttribute('data-theme-choice');
+      applyTheme(choice);
+      try { localStorage.setItem(THEME_KEY, choice); } catch (e) {}
+    });
+  });
+
+  /* ---------- Scroll-spy: i-highlight ang aktibong hakbang ----------
+     Geometry-based, hindi IntersectionObserver: ang mga seksyon dito ay
+     mas mataas pa sa viewport, kaya ang "pumasok sa view" ay masyadong
+     maaga — ang tanong ay "alin ang huling seksyong lumampas sa linya". */
+  var links = {};
+  document.querySelectorAll('a.step-link').forEach(function (a) {
+    links[a.getAttribute('href').slice(1)] = a;
+  });
+  var sections = Array.prototype.slice.call(document.querySelectorAll('main > section[id]'));
+  var ACTIVE_LINE_PX = 140;
+  var current = null;
+
+  function updateActive() {
+    var active = sections[0];
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].getBoundingClientRect().top <= ACTIVE_LINE_PX) active = sections[i];
+    }
+    var link = links[active.id];
+    if (link === current) return;
+    if (current) current.removeAttribute('aria-current');
+    current = link;
+    if (current) current.setAttribute('aria-current', 'true');
+  }
+
+  var ticking = false;
+  window.addEventListener('scroll', function () {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function () { ticking = false; updateActive(); });
+  }, { passive: true });
+  updateActive();
+
+  /* ---------- Kopyahin ang code block ---------- */
+  document.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('button.copy-btn');
+    if (!btn) return;
+    var pre = btn.closest('figure.code').querySelector('pre');
+    var text = pre.textContent;
+    function feedback(msg) {
+      var orig = btn.textContent;
+      btn.textContent = msg;
+      setTimeout(function () { btn.textContent = orig; }, 1300);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { feedback('Nakopya!'); }, function () { feedback('Hindi nakopya'); });
+    } else {
+      feedback('Hindi suportado');
+    }
+  });
+
+  /* ---------- Progreso: alalahanin ang mga natapos na hakbang ---------- */
+  var PROG_KEY = 'ad-click-tutorial-progress';
+  var boxes = document.querySelectorAll('nav.steps-nav input[type="checkbox"]');
+  var progText = document.getElementById('prog-text');
+  var progBar = document.getElementById('prog-bar');
+  function renderProgress() {
+    var done = 0;
+    boxes.forEach(function (b) { if (b.checked) done++; });
+    progText.textContent = done + '/' + boxes.length + ' tapos';
+    progBar.style.width = (done / boxes.length * 100) + '%';
+  }
+  var saved = [];
+  try { saved = JSON.parse(localStorage.getItem(PROG_KEY) || '[]'); } catch (e) {}
+  boxes.forEach(function (b) { b.checked = saved.indexOf(b.getAttribute('data-step')) !== -1; });
+  renderProgress();
+  boxes.forEach(function (b) {
+    b.addEventListener('change', function () {
+      var done = [];
+      boxes.forEach(function (x) { if (x.checked) done.push(x.getAttribute('data-step')); });
+      try { localStorage.setItem(PROG_KEY, JSON.stringify(done)); } catch (e) {}
+      renderProgress();
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
