@@ -213,6 +213,9 @@ importers:
       '@app/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@app/fraud-verdict-store':
+        specifier: workspace:*
+        version: link:../../packages/fraud-verdict-store
       '@app/parquet-archive':
         specifier: workspace:*
         version: link:../../packages/parquet-archive
