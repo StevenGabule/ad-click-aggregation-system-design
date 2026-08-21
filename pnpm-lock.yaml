@@ -77,6 +77,12 @@ importers:
         specifier: ^3.24.1
         version: 3.25.76
 
+  packages/fraud-signals:
+    devDependencies:
+      redis:
+        specifier: ^4.7.0
+        version: 4.7.1
+
   packages/hot-aggregate-store:
     dependencies:
       '@aws-sdk/client-dynamodb':
