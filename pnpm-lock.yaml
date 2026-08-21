@@ -241,6 +241,9 @@ importers:
       '@app/event-schema':
         specifier: workspace:*
         version: link:../../packages/event-schema
+      '@app/fraud-signals':
+        specifier: workspace:*
+        version: link:../../packages/fraud-signals
       '@app/kinesis-publisher':
         specifier: workspace:*
         version: link:../../packages/kinesis-publisher
@@ -250,6 +253,9 @@ importers:
       fastify:
         specifier: ^5.2.0
         version: 5.10.0
+      redis:
+        specifier: ^4.7.0
+        version: 4.7.1
     devDependencies:
       tsx:
         specifier: ^4.19.2
