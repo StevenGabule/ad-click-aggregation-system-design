@@ -77,6 +77,18 @@ importers:
         specifier: ^3.24.1
         version: 3.25.76
 
+  packages/fraud-signals:
+    devDependencies:
+      redis:
+        specifier: ^4.7.0
+        version: 4.7.1
+
+  packages/fraud-verdict-store:
+    dependencies:
+      '@aws-sdk/client-dynamodb':
+        specifier: ^3.716.0
+        version: 3.1090.0
+
   packages/hot-aggregate-store:
     dependencies:
       '@aws-sdk/client-dynamodb':
@@ -201,6 +213,9 @@ importers:
       '@app/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@app/fraud-verdict-store':
+        specifier: workspace:*
+        version: link:../../packages/fraud-verdict-store
       '@app/parquet-archive':
         specifier: workspace:*
         version: link:../../packages/parquet-archive
@@ -235,6 +250,9 @@ importers:
       '@app/event-schema':
         specifier: workspace:*
         version: link:../../packages/event-schema
+      '@app/fraud-signals':
+        specifier: workspace:*
+        version: link:../../packages/fraud-signals
       '@app/kinesis-publisher':
         specifier: workspace:*
         version: link:../../packages/kinesis-publisher
@@ -244,6 +262,31 @@ importers:
       fastify:
         specifier: ^5.2.0
         version: 5.10.0
+      redis:
+        specifier: ^4.7.0
+        version: 4.7.1
+    devDependencies:
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.1
+
+  services/fraud-scorer:
+    dependencies:
+      '@app/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@app/fraud-verdict-store':
+        specifier: workspace:*
+        version: link:../../packages/fraud-verdict-store
+      '@app/kinesis-consumer-loop':
+        specifier: workspace:*
+        version: link:../../packages/kinesis-consumer-loop
+      '@aws-sdk/client-dynamodb':
+        specifier: ^3.716.0
+        version: 3.1090.0
+      '@aws-sdk/client-kinesis':
+        specifier: ^3.716.0
+        version: 3.1089.0
     devDependencies:
       tsx:
         specifier: ^4.19.2

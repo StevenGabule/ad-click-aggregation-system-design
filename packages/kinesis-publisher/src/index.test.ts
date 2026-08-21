@@ -57,4 +57,23 @@ describe('publishClickEvent', () => {
     expect(match?.payload.receivedAt).toEqual(expect.any(Number));
     expect(match?.partitionKey).toMatch(/^ad_881203#[0-7]$/);
   }, 20_000);
+
+  it('includes enrichment fields in the published payload when provided', async () => {
+    const client = testClient();
+    const event: ClickEvent = {
+      cid: `clk_test_${Date.now()}`,
+      ad_id: 'ad_881203',
+      campaign_id: 'cmp_44210',
+      pub_id: 'pub_6612',
+      ts: '2026-07-12T09:14:32.118Z',
+      sig: 'deadbeef',
+    };
+
+    await publishClickEvent(client, STREAM_NAME, event, { velocityFlag: true, previewBot: false });
+
+    const records = await readAllRecords(client);
+    const match = records.find((r) => r.payload.cid === event.cid);
+
+    expect(match?.payload).toMatchObject({ velocityFlag: true, previewBot: false });
+  }, 20_000);
 });

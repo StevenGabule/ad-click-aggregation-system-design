@@ -8,7 +8,7 @@ import {
 } from '@aws-sdk/client-kinesis';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { S3Client } from '@aws-sdk/client-s3';
-import { ensureDedupTable, ensureHotAggregateTable, ensureStatementsTable } from './tables.js';
+import { ensureDedupTable, ensureHotAggregateTable, ensureStatementsTable, ensureFraudVerdictsTable } from './tables.js';
 import { ensureRawArchiveBucket } from './buckets.js';
 
 const STREAM_NAME = 'ad-clicks-raw';
@@ -52,6 +52,7 @@ async function main() {
   await ensureDedupTable(dynamoClient);
   await ensureHotAggregateTable(dynamoClient);
   await ensureStatementsTable(dynamoClient);
+  await ensureFraudVerdictsTable(dynamoClient);
 
   const s3Client = new S3Client({
     region: process.env.AWS_REGION ?? 'us-east-1',
@@ -61,7 +62,7 @@ async function main() {
   });
   await ensureRawArchiveBucket(s3Client);
 
-  console.log('LocalStack resources ready: Kinesis stream, dedup table, hot aggregate table, statements table, raw archive bucket.');
+  console.log('LocalStack resources ready: Kinesis stream, dedup table, hot aggregate table, statements table, raw archive bucket, fraud verdicts table.');
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

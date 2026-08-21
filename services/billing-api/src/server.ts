@@ -2,8 +2,10 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { prisma, getCampaignOwnerAdvertiserId, resolveApiKey } from '@app/db';
 import { getStatement, putStatement } from '@app/statements-store';
 import { createArchiveDb, reconcileDate, bucketPrefixForDate } from '@app/parquet-archive';
+import { listExcludedCids } from '@app/fraud-verdict-store';
 import { loadEnv } from '@app/config';
 import { buildApp } from './app.js';
+import { reconcileAndStore } from './reconciliation.js';
 
 const env = loadEnv();
 const opsToken = process.env.OPS_TOKEN;
@@ -22,15 +24,12 @@ const app = buildApp({
   resolveApiKey: (rawKey) => resolveApiKey(prisma, rawKey),
   getCampaignOwner: (campaignId) => getCampaignOwnerAdvertiserId(prisma, campaignId),
   getStatement: (campaignId, period) => getStatement(dynamo, campaignId, period),
-  reconcileAndStore: async (date) => {
-    const prefix = bucketPrefixForDate(date);
-    const results = await reconcileDate(archiveDb, prefix);
-    const reconciledAt = new Date().toISOString();
-    for (const result of results) {
-      await putStatement(dynamo, { ...result, period: date, reconciledAt, sourceArchive: prefix });
-    }
-    return results.length;
-  },
+  reconcileAndStore: (date) => reconcileAndStore({
+    bucketPrefixForDate,
+    listExcludedCids: (d) => listExcludedCids(dynamo, d),
+    reconcileDate: (prefix, excludedCids) => reconcileDate(archiveDb, prefix, excludedCids),
+    putStatement: (statement) => putStatement(dynamo, statement),
+  }, date),
 });
 
 await app.listen({ port: Number(process.env.PORT ?? 3003), host: '0.0.0.0' });

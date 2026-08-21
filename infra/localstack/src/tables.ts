@@ -80,3 +80,22 @@ export async function ensureStatementsTable(client: DynamoDBClient): Promise<voi
     BillingMode: 'PAY_PER_REQUEST',
   }));
 }
+
+export const FRAUD_VERDICTS_TABLE_NAME = 'fraud-verdicts';
+
+export async function ensureFraudVerdictsTable(client: DynamoDBClient): Promise<void> {
+  if (await tableExists(client, FRAUD_VERDICTS_TABLE_NAME)) return;
+
+  await client.send(new CreateTableCommand({
+    TableName: FRAUD_VERDICTS_TABLE_NAME,
+    AttributeDefinitions: [
+      { AttributeName: 'date', AttributeType: 'S' },
+      { AttributeName: 'cid', AttributeType: 'S' },
+    ],
+    KeySchema: [
+      { AttributeName: 'date', KeyType: 'HASH' },
+      { AttributeName: 'cid', KeyType: 'RANGE' },
+    ],
+    BillingMode: 'PAY_PER_REQUEST',
+  }));
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@app/fraud-scorer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/run.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-kinesis": "^3.716.0",
+    "@aws-sdk/client-dynamodb": "^3.716.0",
+    "@app/kinesis-consumer-loop": "workspace:*",
+    "@app/fraud-verdict-store": "workspace:*",
+    "@app/config": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}

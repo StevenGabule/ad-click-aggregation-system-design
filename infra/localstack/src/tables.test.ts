@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DynamoDBClient, DescribeTableCommand } from '@aws-sdk/client-dynamodb';
 import { ensureDedupTable, ensureHotAggregateTable, DEDUP_TABLE_NAME, HOT_AGGREGATE_TABLE_NAME } from './tables.js';
 import { ensureStatementsTable, STATEMENTS_TABLE_NAME } from './tables.js';
+import { ensureFraudVerdictsTable, FRAUD_VERDICTS_TABLE_NAME } from './tables.js';
 
 function testClient(): DynamoDBClient {
   return new DynamoDBClient({
@@ -46,6 +47,21 @@ describe('ensureStatementsTable', () => {
     expect(description.Table?.KeySchema).toEqual([
       { AttributeName: 'campaignId', KeyType: 'HASH' },
       { AttributeName: 'period', KeyType: 'RANGE' },
+    ]);
+  }, 20_000);
+});
+
+describe('ensureFraudVerdictsTable', () => {
+  it('creates the fraud verdicts table keyed by date and cid, and is a no-op the second time', async () => {
+    const client = testClient();
+    await ensureFraudVerdictsTable(client);
+    await ensureFraudVerdictsTable(client);
+
+    const description = await client.send(new DescribeTableCommand({ TableName: FRAUD_VERDICTS_TABLE_NAME }));
+    expect(description.Table?.TableStatus).toBe('ACTIVE');
+    expect(description.Table?.KeySchema).toEqual([
+      { AttributeName: 'date', KeyType: 'HASH' },
+      { AttributeName: 'cid', KeyType: 'RANGE' },
     ]);
   }, 20_000);
 });

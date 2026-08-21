@@ -1,11 +1,18 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { ClickEventSchema, type ClickEvent } from '@app/event-schema';
 import { verifySignature } from '@app/click-signature';
+import { isPreviewBotRequest, type VelocityChecker } from '@app/fraud-signals';
 import type { AdDirectoryEntry } from '@app/db';
+
+export interface ClickEnrichment {
+  velocityFlag: boolean;
+  previewBot: boolean;
+}
 
 export interface ClickRedirectDeps {
   directoryCache: { lookup(adId: string): AdDirectoryEntry | undefined };
-  publish: (event: ClickEvent) => Promise<void>;
+  velocityChecker: Pick<VelocityChecker, 'checkAndIncrement'>;
+  publish: (event: ClickEvent, enrichment: ClickEnrichment) => Promise<void>;
 }
 
 export function buildApp(deps: ClickRedirectDeps): FastifyInstance {
@@ -46,8 +53,18 @@ export function buildApp(deps: ClickRedirectDeps): FastifyInstance {
 
     reply.redirect(entry.landingUrl, 302);
 
-    setImmediate(() => {
-      deps.publish(event).catch((err) => req.log.error({ err, cid: event.cid }, 'click enqueue failed'));
+    const previewBot = isPreviewBotRequest({
+      purpose: (req.headers['purpose'] ?? req.headers['sec-purpose']) as string | undefined,
+      userAgent: req.headers['user-agent'],
+    });
+
+    setImmediate(async () => {
+      try {
+        const velocityFlag = await deps.velocityChecker.checkAndIncrement(req.ip);
+        await deps.publish(event, { velocityFlag, previewBot });
+      } catch (err) {
+        req.log.error({ err, cid: event.cid }, 'click enqueue failed');
+      }
     });
   });
 

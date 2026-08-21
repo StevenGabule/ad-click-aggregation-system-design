@@ -15,7 +15,8 @@
     "@app/db": "workspace:*",
     "@app/statements-store": "workspace:*",
     "@app/parquet-archive": "workspace:*",
-    "@app/config": "workspace:*"
+    "@app/config": "workspace:*",
+    "@app/fraud-verdict-store": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.19.2"

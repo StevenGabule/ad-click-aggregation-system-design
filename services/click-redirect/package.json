@@ -17,7 +17,9 @@
     "@app/directory-cache": "workspace:*",
     "@app/kinesis-publisher": "workspace:*",
     "@app/db": "workspace:*",
-    "@app/config": "workspace:*"
+    "@app/config": "workspace:*",
+    "@app/fraud-signals": "workspace:*",
+    "redis": "^4.7.0"
   },
   "devDependencies": {
     "tsx": "^4.19.2"
