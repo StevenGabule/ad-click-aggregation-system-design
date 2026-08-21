@@ -83,6 +83,12 @@ importers:
         specifier: ^4.7.0
         version: 4.7.1
 
+  packages/fraud-verdict-store:
+    dependencies:
+      '@aws-sdk/client-dynamodb':
+        specifier: ^3.716.0
+        version: 3.1090.0
+
   packages/hot-aggregate-store:
     dependencies:
       '@aws-sdk/client-dynamodb':
